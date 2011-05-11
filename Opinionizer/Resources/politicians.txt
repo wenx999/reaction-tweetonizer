@@ -1,0 +1,6 @@
+#Louçã Trócaste Francisco Louçã
+ppcoelho:Passos Coelho,Pedro Passos Coelho;passos fedelho,fedelho,coelhinho;candidato do PSD,líder do PSD,líder social-democrata,PPC;
+jsocrates:José Sócrates,Pinto de Sousa,Sócrates;trócaste,"engenheiro","eng.","eng",espécie de engenheiro,inginheiro,inginhero,sr inginhero,sr. "eng.",pseudo engenheiro,Sócras,Socas,JOKER Socas,Menino de Ouro,menino de ouro do PS,pinócrates,Pinoquio,Sokretino,Zéquinha Sócrates;candidato do PS,líder do PS,candidato socialista,primeiro-ministro;
+pportas:Paulo Portas,portas;paulinho das freiras,tio Paulinho,Caterine Deneuve,George Washington Portas,paulo das feiras;candidato do CDS/PP,candidato do CDS-PP,candidato do CDS,líder do CDS/PP,líder do CDS-PP,líder do CDS;
+flouca:Francisco Louçã,Louçã;;candidato do BE,líder do BE;
+jsousa:Jerónimo Sousa,Jerónimo de Sousa,jeronimo;metalúrgico;candidato do PCP,líder do PCP,candidato comunista;

@@ -1,0 +1,16 @@
+Regras de atribuição de polaridade (em construção)
+1) Caracteres especiais
+
+O tweet deverá ser classificado como negativo se contiver um ou mais dos seguintes elementos:
+
+# humor
+Cruzes
+Passou-se!
+LINDO
+zz(número indeterminado de caracteres)
+buah
+"ADJ+"
+
+2) Padrões léxico-sintácticos (os elementos dentro de parêntesis rectos estão a representar  uma classe de palavras que se encontram definidas numa lista com o mesmo nome)
+
+

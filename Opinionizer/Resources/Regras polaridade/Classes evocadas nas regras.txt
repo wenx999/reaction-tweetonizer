@@ -1,0 +1,48 @@
+QUANT = ['muito', 'muitíssimo', 'pouco', 'pouquíssimo', 'bastante',
+             'completamente', 'imensamente', 'estupidamente', 'demasiado', 
+             'profundamente', 'perfeitamente', 'relativamente', 'simplesmente', 
+             'verdadeiramente', 'inteiramente', 'realmente', 
+             'sempre', 'mais', 'bem', 'altamente', 'extremamente', 'mesmo', 
+             'particularmente', 'igualmente', 'especialmente', 'quase', 'tão',
+             'absolutamente', 'potencialmente', 'aparentemente', 'exactamente', 'nada'
+             ]
+
+
+VCOP = ['é', 'foi', 'era', 'será',
+            'está', 'esteve', 'estava', 'estará',
+            'continua', 'continuou', 'continuava', 'continuará',
+            'permanece', 'permaneceu', 'permanecia', 'permanecerá',
+            'fica', 'ficou', 'ficava', 'ficará',
+            'anda', 'andou', 'andava', 'andará',
+            'encontra-se', 'encontrou-se', 'encontrava-se', 'encontrar-se-á',
+            'sente-se', 'sentiu-se', 'sentia-se', 'sentir-se-á',
+            'mostra-se', 'mostrou-se', 'mostrava-se', 'mostrar-se-á',
+            'revela-se', 'revelou-se', 'revelava-se', 'revelar-se-á',
+            'torna-se', 'tornou-se', 'tornava-se', 'tornar-se-á',
+            'vive', 'viveu', 'vivia', 'viverá'
+           ]
+
+
+NCLAS = ['gajo',  'homem', 'senhor', 'fulano', 'tipo',
+	'indivíduo', 'rapaz', 'pessoa', 'figura', 'personagem', 'criatura',
+	'político', 'candidato', 'líder', 'adversário' 
+                  ]
+
+VSUP = ['aparenta', 'aparentou, 'aparentava', 'aparentará',
+	'apresenta', 'apresentou', 'apresentava', 'apresentará',
+	'continua', 'continuou', 'continuava', 'continuará,
+	'demonstra', 'demonstrou', 'demonstrava', 'demonstrará',
+	'faz', 'fez', 'fazia', 'fará',
+	'mostra', 'mostrou', 'mostrava', 'mostrará',
+	'revela', 'revelou', revelava', 'revelará',
+	'sente', 'sentiu', 'sentia', 'sentirá',
+	'tem', 'teve', 'tinha', 'terá',
+	'transparece', transpareceu', transparecia', transparecerá',
+	'anda sob', 'andou sob', 'andava sob', 'andará sob', 
+	'anda com', 'andou com', 'andava com', 'andará com'
+	'entra em', 'entrou em', 'entrava em', entrará em',
+	'está com', 'esteve com', 'estava com', 'estará com',
+	'está em', 'esteve em', 'estava em', 'estará em',
+	'está sob', 'esteve sob', 'estava sob', 'estará sob'
+	'fica com', 'ficou com', 'ficava com', 'ficará com'
+]
