@@ -10,7 +10,7 @@ from datetime import datetime,timedelta
 import time
 import Persons 
 import SentiTokens
-from Opinionizers import Naive,Rules
+from Opinionizers import Naive,Rules,MultiWordHandler
 import operator
 import xml.dom.minidom
 import urllib2
@@ -111,18 +111,18 @@ def getTweetsCSV():
 
 def usage(commandName):
     
-    print "usage: " + commandName + " [-pt (post to twitter)|-ptr (post to twitter but randomize posts)] [-pr=proxy] [-pol=politicians file] [-sent=sentiment tokens file] [-excpt=exception sentiment tokens file] [-bd=begin date (yyyy-mm-dd)] [-ed=end date (yyyy-mm-dd)] [-ss=single sentence] [-ssw=single sentence and web output]"
+    print "usage: " + commandName + " [-pt (post to twitter)|-ptr (post to twitter but randomize posts)] [-pr=proxy] [-pol=politicians file] [-sent=sentiment tokens file] [-excpt=exception sentiment tokens file] [-mw=multiwords file] [-bd=begin date (yyyy-mm-dd)] [-ed=end date (yyyy-mm-dd)] [-ss=single sentence] [-ssw=single sentence and web output]"
 
-def logClassifiedTweets(tweetsByTarget,politiciansFile,sentiTokensFile,path):
+def logClassifiedTweets(tweetsByTarget,path):
     
-    """ Writes a log of the classified tweets. Log is a csv file with the columns: ID|USER|TARGET|MENTION|POLARITY|INFO|MESSAGE """
+    """ Writes a log (csv file) of the classified tweets """
     
     print "Writting log of analyzed tweets: " + path
      
     f = codecs.open(path,"w","utf-8")
     
     #Column headers
-    f.write("ID|USER|TARGET|MENTION|POLARITY|INFO|MESSAGE\n")    
+    f.write("ID|USER|TARGET|MENTION|POLARITY|INFO|MESSAGE|TAGGED\n")    
     
     for listOfTweets in tweetsByTarget:
         
@@ -131,9 +131,10 @@ def logClassifiedTweets(tweetsByTarget,politiciansFile,sentiTokensFile,path):
             target = tweet.target.replace("\n"," ")
             mention = tweet.mention.replace("\n"," ")
             metadata = tweet.metadata.replace("\n"," ")
-            sentence = tweet.sentence.replace("|","\\").replace("\n"," ")
+            sentence = tweet.sentence.replace("|","\\").replace("\n"," ").replace("\t"," ").replace("\r"," ")
+            taggedSentence = tweet.taggedSentence.replace("|","\\").replace("\n"," ").replace("\t"," ").replace("\r"," ")
             
-            f.write(tweet.id + "|" + tweet.user + "|\"" + target  + "\"|\"" + mention + "\"|" + str(tweet.polarity ) + "|\"" + metadata +  "\"|\"" + sentence + "\"\n")
+            f.write(tweet.id + "|" + tweet.user + "|\"" + target  + "\"|\"" + mention + "\"|" + str(tweet.polarity ) + "|\"" + metadata +  "\"|\"" + sentence + "\"|\"" + taggedSentence + "\"\n")
     
     f.close()
 
@@ -143,6 +144,7 @@ def postResults(stats,proxy,date):
         
         Params: stats -> list of tuples(target,nTweets,nPositives,nNeutrals,nNegatives)
                 proxy -> proxy url 
+                date  -> results of date
     """
     print "\nPosting daily stats...\n"
     
@@ -178,7 +180,7 @@ def getStats(tweetsByTarget):
     """
         Generates statistics based on the processed tweets
         
-        Param: tweetsByTarget -> dictionary {target;list of tweets of that target}
+        Param: tweetsByTarget -> dictionary {target;[tweets of that target]}
         Returns: list of tuples(target,nTweets,nPositives,nNeutrals,nNegatives)
     """
     
@@ -219,7 +221,7 @@ def getNewTweets(beginDate,endDate,proxy):
                 end date
                 proxy
                 
-        Returns: dictionary {ID;Opinion Instance}
+        Returns: list of Opinion instances
     """
     
     print "Getting new tweets..."
@@ -251,7 +253,7 @@ def getNewTweets(beginDate,endDate,proxy):
     
     #Read the JSON response
     jsonTwitter = simplejson.loads(unicode(twitterData.read().decode("utf-8")))  
-    listOfTweets = {}
+    listOfTweets = []
     
     #Build a dictionary
     for tweet in jsonTwitter["tweets"]:
@@ -262,7 +264,7 @@ def getNewTweets(beginDate,endDate,proxy):
         
         date =  datetime.strptime(tweet["created_at"].split(' ')[0], '%Y-%m-%d')
         
-        listOfTweets[id] = Opinion(tweet["status_id"],unicode(tweet["text"]),user=userId,date=date)
+        listOfTweets.append(Opinion(tweet["status_id"],unicode(tweet["text"]),user=userId,date=date))
      
     print len(listOfTweets), " tweets loaded\n"  
     return listOfTweets
@@ -278,8 +280,11 @@ def tweetResults(tweets,acessKey,acessSecrect,randomizeTweets,proxy):
     """
         Tweets the results in a twitter account
         
-        Params: tweets -> list of tweet messages
-                proxy
+        Params: tweets -> list of tweet messages                
+                accessKey -> for oAuth authentication
+                accessSecret -> for oAuth authentication
+                randomizeTweets -> True if tweets need to have a random substring to avoid posting duplicates
+                proxy 
     """
     
     print "Posting results to twitter...\n"
@@ -315,6 +320,8 @@ def formatStats(stats,nTweets,beginDate,endDate):
         
         Params: stats -> list of tuples(target,nTweets,nPositives,nNeutrals,nNegatives)
                 nTweets -> number of processed tweets
+                beginDate
+                endDate
     """
     
     tweetMessages = []
@@ -347,22 +354,36 @@ def formatStats(stats,nTweets,beginDate,endDate):
     
     return tweetMessages
 
-def processTweets(politiciansFile,sentiTokensFile,exceptSentiTokens,tweets):
+def processTweets(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,tweets):
+    
+    """ 
+        Processes a list of tweets:
+        1. Identify target
+        2. If target is one of the politicians infer the comment's polarity
+        
+        politiciansFile -> path to the politicians list file
+        sentiTokensFile -> path to the sentiTokens list file
+        exceptSentiTokens -> path to the list of sentiTokens that cannot lose their accents without
+                             causing ambiguity for ex: más -> mas
+         tweets -> list of tweets
+    """
     
     print "Loading resources...\nPoliticians: " + politiciansFile + "\nSentiTokens: " + sentiTokensFile + "\nExceptTokens: " +  exceptSentiTokens
     politicians = Persons.loadPoliticians(politiciansFile)
     sentiTokens = SentiTokens.loadSentiTokens(sentiTokensFile,exceptSentiTokens)
     naive = Naive(politicians,sentiTokens)
     rules = Rules(politicians,sentiTokens)
+    #multiWordTokenizer = MultiWordHandler(multiWordsFile)
     
     targetedTweets = {}
+    #taggedTweets = {}
     classifiedTweets = {}
     
     #Process tweets...
     #First step: infer targets and create a dictionary {target,listOfTweets}    
     print "Identifying targets..."
      
-    for tweet in tweets.itervalues():        
+    for tweet in tweets:        
         
         tweetsWithTarget = naive.inferTarget(tweet)
         
@@ -370,14 +391,26 @@ def processTweets(politiciansFile,sentiTokensFile,exceptSentiTokens,tweets):
             
             for tweet in tweetsWithTarget:
             
-                if tweet.target not in targetedTweets:
+                if tweet.target not in targetedTweets:                    
                 
                     targetedTweets[tweet.target] = []
  
                 targetedTweets[tweet.target].append(tweet)
     
     print  len(targetedTweets), " Targets Identified! Inferring polarity..."
+            
+    #for target,tweets in targetedTweets.items():
+        
+    #     for tweet in tweets:            
+            
+    #        if tweet.target not in taggedTweets:
+            
+    #           taggedTweets[tweet.target] = []
+                
+    #      taggedSentence = multiWordTokenizer.tokenizeMultiWords(tweet.sentence)            
     
+    #      taggedTweets[target].append(tweet.clone(taggedSentence=taggedSentence))
+
     #Second step infer polarity 
     for target,tweets in targetedTweets.items():
         
@@ -448,10 +481,10 @@ def printResultsWeb(results,sentence):
         
         print html.format(sentence,targets, str(results[0].polarity)).encode("utf-8")       
            
-def main(politiciansFile,sentiTokensFile,exceptSentiTokens,logFolder,beginDate,endDate,post,randomizeTweets,proxy,):       
+def main(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,logFolder,beginDate,endDate,post,randomizeTweets,proxy,):       
     
     listOfTweets = getNewTweets(beginDate,endDate,proxy)
-    classifiedTweets = processTweets(politiciansFile,sentiTokensFile,exceptSentiTokens,listOfTweets)
+    classifiedTweets = processTweets(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,listOfTweets)
                
     stats = getStats(classifiedTweets)    
     formatedStats = formatStats(stats,len(listOfTweets),beginDate,endDate)
@@ -469,7 +502,7 @@ def main(politiciansFile,sentiTokensFile,exceptSentiTokens,logFolder,beginDate,e
         printMessages(formatedStats)
     
     logFilename = logFolder + "tweets"+str(beginDate.month)+str(beginDate.day)+str(endDate.day)+".csv"
-    logClassifiedTweets(classifiedTweets.itervalues(),politiciansFile,sentiTokensFile,logFilename)
+    logClassifiedTweets(classifiedTweets.itervalues(),logFilename)
 
 if __name__ == '__main__':   
     
@@ -480,8 +513,9 @@ if __name__ == '__main__':
     beginDate = datetime.today() - timedelta(1)
     endDate = datetime.today()     
     politiciansFile = "../Resources/politicians.txt"
-    sentiTokensFile = "../Resources/sentiTokens-0505.txt"
+    sentiTokensFile = "../Resources/sentitokens-2011-05-13.txt"
     exceptSentiTokens = "../Resources/SentiLexAccentExcpt.txt"
+    multiWordsFile = "../Resources/multiwords.txt"
     logFolder = "../Results/"
     singleSentence = None
     webOutput = False
@@ -505,6 +539,8 @@ if __name__ == '__main__':
             logFolder = param.replace("-log=","")
             if not logFolder.endswith("/"):
                 logFolder = logFolder + "/"        
+        elif param.startswith("-mw="):                     
+            multiWordsFile = param.replace("-mw=","")
         elif param.startswith("-ss="):                     
             singleSentence = unicode(param.replace("-ss=","").decode("utf-8"))
         elif param.startswith("-ssw="):                     
@@ -528,7 +564,7 @@ if __name__ == '__main__':
         beginDate = beginDate.replace(hour=19,minute=1,second=0,microsecond=0)
         endDate = endDate.replace(hour=19,minute=0,second=0,microsecond=0)
         
-        main(politiciansFile,sentiTokensFile,exceptSentiTokens,logFolder,beginDate,endDate,post,randomizeTweets,proxy)
+        main(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,logFolder,beginDate,endDate,post,randomizeTweets,proxy)
         print "Done!"
     else:
         processSingleSentence(politiciansFile, sentiTokensFile, exceptSentiTokens, singleSentence,webOutput)

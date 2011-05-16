@@ -11,29 +11,7 @@ import os
 import urllib2
 from nltk import word_tokenize, wordpunct_tokenize
 import re
-
-def twitAgain(proxy):
-    
-    consumer_key = "sEwbkfgkFU4B7l5DBuRvXw"
-    consumer_secret = "aUAKFq3qpB7NqeHh89AIJL85ZXHORlmZ7WIczLoxE"    
-    access_key = "284707222-ZRvtSilVFXGcEYT8AZ04STWP9q7VXofN3L3Ufx2s"
-    access_secret = "1PkYjXaJWzSyd0K6Z4g5Wsg6NZ9iVNNOxI277ELrbqA"
-    
-    if proxy != None:
-        #os.environ['HTTP_PROXY'] = proxy        
-        proxy_handler = urllib2.ProxyHandler({'http': proxy})    
-        opener = urllib2.build_opener(proxy_handler)
-        urllib2.install_opener(opener)        
-              
-    # auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
-    #auth.set_access_token(access_key, access_secret)
-    # api = tweepy.API(auth)
-    
-    #for f in api.followers():
-        
-    #     print f.name
-        
-    #api.update_status(status="And now for something completely different...")
+import contextRestrictions
 
 def isFalsePositive(mention,sentence):
         
@@ -63,26 +41,55 @@ def isFalsePositive(mention,sentence):
         except:
             print mention, " in ", sentence
 
+def tokenizer2():
+    
+    regex = ur"(?:\W?macaquinho do chinês\W?)|(?:\W?nova iorque\W?)|(?:\W?big ben\W?)|(?:\W?qualquer coisa\W?)"
+    
+    str = u"Estava lá em plena ,nova iorque! Um macaquinho do chinês, tinha uma camisola do big ben ou qualquer coisa e não qualquer outra coisa"
+    newSentence = str
+    
+    matches = re.findall(regex,str)
+    print matches
+    for match in matches:
+            
+            a = match.strip(' ').rstrip(' ')
+            
+            if a != "":
+            
+                r = a.replace(" ","_")
+                newSentence = newSentence.replace(a,r)
+            
+            
+    print str, " -> ", newSentence
+    
 def tokenizer():
     
-    s = "Good muffins cost $3.88\nin New York.  Please!!! buy me\ntwo of them.\n\nThanks."
+    regex = ur"(?:\W?macaquinho do chinês\W?)|(?:\W?nova iorque\W?)|(?:\W?big ben\W?)|(?:\W?qualquer coisa\W?)"
     
-    print word_tokenize(s)
-    print "-----------------------" 
-    print wordpunct_tokenize(s)    
-
+    str = u"Estava lá em plena ,nova iorque! Um macaquinho do chinês, tinha uma camisola do big ben ou qualquer coisa e não qualquer outra coisa"
+    newSentence = str
+    
+    matches = re.findall(regex,str)
+    print matches
+    for match in matches:
+        
+        for m in match:
+            
+            a = m.strip(' ').rstrip(' ')
+            
+            if a != "":
+            
+                r = a.replace(" ","_")
+                newSentence = newSentence.replace(a,r)
+            
+            
+    print str, " -> ", newSentence
+   
 if __name__ == '__main__':
     
     print "GOOO!"
     
-    print isFalsePositive("portas", "O portas é fixe")
-    print isFalsePositive("portas", "O portas não sabe nadar")
-    print isFalsePositive("portas", "às portas é fixe")
-    print isFalsePositive("portas", "miguel portas é fixe")
-    print isFalsePositive("portas", "portas de benfica é fixe")
-    print isFalsePositive("portas", "eles abrem portas")
-    print isFalsePositive("socrates", "eles abrem portas")
-    
-    
+    for v in contextRestrictions.left_context.itervalues():
+        print v
     
     print "Done!"

@@ -10,16 +10,21 @@ import Utils
 import re
 
 class SentiToken:
-    
-    lemma = ""
-    flexions = []
-    polarity = None
 
     def __init__(self,lemma,polarity,flexions=None):
     
         self.lemma = lemma
         self.flexions = flexions
         self.polarity = polarity
+        self.tokens = {} 
+        
+        self.tokens[lemma] = ''
+        
+        if flexions != None:
+            
+            for flexion in self.flexions:
+                
+                self.tokens[flexion] = ''        
         
     def tostring(self):
         
@@ -31,19 +36,14 @@ class SentiToken:
         
         return adj.strip(",") + "}"
 
-    def isMatch(self,adjective):
+    def isMatch(self,token):
             
-            return adjective == self.lemma or adjective in self.flexions  
+            #return adjective == self.lemma or adjective in self.flexions
+            return token in self.tokens  
     
     def getTokens(self):
         
-        tokens = [self.lemma]
-        
-        for flexion in self.flexions:
-            
-            tokens.append(flexion)
-        
-        return tokens
+        return list(self.tokens.iterkeys())
         
     
 def loadSentiTokens(path,pathExceptions):
@@ -79,8 +79,9 @@ def loadSentiTokens(path,pathExceptions):
                     if currentLemma not in exceptions and currentLemma != Utils.normalize(currentLemma):
                         
                         currentFlexions.append(Utils.normalize(currentLemma))
-                                       
-                    adjectives.append(SentiToken(currentLemma,currentPolarity,currentFlexions))                    
+                                
+                    adjectives.append(SentiToken(currentLemma,currentPolarity,currentFlexions))
+                                        
                     currentLemma = lemma
                     currentPolarity = re.findall(polarityRegex,line)[0][4:]                                   
                     currentFlexions = []
@@ -96,7 +97,7 @@ def loadSentiTokens(path,pathExceptions):
                     
         except:
             None
-    f.close()
+    f.close()    
     
     return adjectives
 
@@ -114,11 +115,14 @@ if __name__ == "__main__":
     
     #loadExceptionTokens("../Resources/SentiLexAccentExcpt.txt")
     
-    
-    for a in loadSentiTokens("../Resources/sentiTokens.txt","../Resources/SentiLexAccentExcpt.txt"):
+    sentiTokens = loadSentiTokens("../Resources/sentitokens-2011-05-13.txt","../Resources/SentiLexAccentExcpt.txt")
         
-        None
-        #print "-----------------------"
-        #print a.tostring().encode("utf-8")
+    for a in sentiTokens:
+        
+        #None
+        print "-----------------------"
+        print a.tostring().encode("utf-8")
+    
+    print len(sentiTokens)
     
     print "Done"    

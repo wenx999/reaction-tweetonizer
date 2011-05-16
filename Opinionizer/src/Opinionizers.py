@@ -10,65 +10,73 @@ from Opinion import Opinion
 import Utils 
 import Persons
 import SentiTokens
+import codecs
+import StringIO
+import cStringIO
+import contextRestrictions
 
 class Naive:
-    
-    persons = None 
-    sentiTokens = None
-    targetsRegex = u""
-    sentiTokensRegex = u""
-    
+ 
     def __init__(self,persons,sentiTokens):
     
         self.persons = persons        
         self.sentiTokens = sentiTokens    
+        
+        buffer = StringIO.StringIO()
+        buffer.write(u'')
         
         # Build a regex for identifying targets
         for person in self.persons:            
             
             for name in person.names:
                     
-                    self.targetsRegex += ".?" +name + ".?|"                   
+                    #self.targetsRegex += ".?" +name + ".?|"                   
+                    buffer.write(u".?" + name + u".?|")
             
-            for name in person.nicknames:
+            for nickName in person.nicknames:
                     
-                    self.targetsRegex += ".?" +name + ".?|"
+                    #self.targetsRegex += ".?" +name + ".?|"
+                    buffer.write(u".?" + nickName + u".?|")
                     
-            for name in person.ergos:
+            for ergo in person.ergos:
                     
-                    self.targetsRegex += ".?" +name + ".?|"
+                    #self.targetsRegex += ".?" +name + ".?|"
+                    buffer.write(u".?" + ergo + u".?|")
 
-        self.targetsRegex = self.targetsRegex.strip('|')
+        self.targetsRegex = buffer.getvalue().strip('|')
+        
+        buffer = StringIO.StringIO()
                  
         # Build a regex for identifying sentiment tokens
         for sentiToken in sentiTokens:
             
             for token in sentiToken.getTokens():
                 
-                self.sentiTokensRegex += ".?" + token + ".?|"  
+                #self.sentiTokensRegex += ".?" + token + ".?|"
+                buffer.write(".?" + token + ".?|")  
         
-        self.sentiTokensRegex.strip('|')
+        self.sentiTokensRegex = buffer.getvalue().strip('|')
     
     def isFalsePositive(self,mention,sentence):
         
-        left_context = {u'portas': [u'as',u'nas',u'às',u'miguel',u'abriu',u'abriram',u'abre',u'abrem',u'numeral',u'mais']}
-        right_context = {u'portas': [u'de',u'do',u'da',u'das',u'dos']}
+        #left_context = {u'portas': [u'as',u'nas',u'às',u'miguel',u'abriu',u'abriram',u'abre',u'abrem',u'numeral',u'mais']}
+        #right_context = {u'portas': [u'de',u'do',u'da',u'das',u'dos']}
         
         tokens = re.findall(u'\w+',sentence,re.U)
         nMention = unicode(mention)
         
         try:
-            if nMention in left_context:
+            if nMention in contextRestrictions.left_context:
         
-                badTokens = left_context[nMention]
+                badTokens = contextRestrictions.left_context[nMention]
                 
                 if tokens[tokens.index(nMention)-1] in badTokens:
                     print "Discarded (left) " + nMention + " in " + "**" + sentence.replace('\n',' ') + "**"
                     return True
             
-            if mention in right_context:
+            if mention in contextRestrictions.right_context:
                 
-                badTokens = right_context[nMention]             
+                badTokens = contextRestrictions.right_context[nMention]             
                 
                 if tokens[tokens.index(nMention)+1] in badTokens:
                     print "Discarded (right) " + nMention + " in " + "**" +  sentence.replace('\n',' ') + "**"
@@ -87,7 +95,7 @@ class Naive:
         """
         
         info = u"Targets: "
-        specialChars = u' “”\"@)(!#;&:\\@/-_,?.«»\' ' 
+        specialChars = u' “”\"@)(!#;&:\\@/-_,?.«»\'~ ' 
         sentence = opinion.sentence.lower()
         
         #Find matches
@@ -99,7 +107,7 @@ class Naive:
             
             for match in matches:
                 
-                mention = match.rstrip(specialChars).lstrip(specialChars)
+                mention = match.rstrip(specialChars).lstrip(specialChars)                
                 
                 target = self.replaceNameWithTarget(mention)
                 
@@ -107,7 +115,7 @@ class Naive:
                 
                     info += mention + ","
                     targets[target] = mention
-                    
+            
             if len(targets) > 0:
                 
                 results = []
@@ -210,6 +218,7 @@ class Naive:
             return None
 
 class Rules:
+
     
     QUANT = [u'muito', u'muitíssimo', u'pouco', u'pouquíssimo', u'bastante',
              u'completamente', u'imensamente', u'estupidamente', u'demasiado', 
@@ -258,15 +267,15 @@ class Rules:
             u'fica com', u'ficou com', u'ficava com', u'ficará com'
             ]
     
-    persons = None 
-    sentiTokens = None
-    quantRegex = u''
-    vcopRegex = u''
-    nclasRegex = u''
-    vsupRegex = u''
-    negSentiRegex = u''
-    neutSentiRegex = u''
-    posSentiRegex = u''
+    #persons = None 
+    #sentiTokens = None
+    #quantRegex = u''
+    #vcopRegex = u''
+    #nclasRegex = u''
+    #vsupRegex = u''
+    #negSentiRegex = u''
+    #neutSentiRegex = u''
+    #posSentiRegex = u''
     
     def __init__(self,persons,sentiTokens):
     
@@ -282,11 +291,14 @@ class Rules:
         
         regex = u''
         
+        buffer = StringIO.StringIO()
+        
         for token in list:
             
-            regex += token+"|"
+            #regex += token+"|"
+            buffer.write(token+"|")
         
-        return regex.strip('|')
+        return buffer.getvalue().strip('|')
         
     
     def buildPersonsDict(self,personsList):
@@ -303,31 +315,31 @@ class Rules:
     
     def populateSentiRegexes(self,sentiTokens):
         
-        partialRegex = u''
-        positiveRegex = u''
-        negativeRegex = u''
-        neutralRegex = u''
+        partialRegex = StringIO.StringIO()
+        positiveRegex = StringIO.StringIO()
+        negativeRegex = StringIO.StringIO()
+        neutralRegex = StringIO.StringIO()
         
         for sentiToken in sentiTokens:
             
             for token in sentiToken.getTokens():
             
-                partialRegex += token + "|"    
+                partialRegex.write(token + "|")    
             
             if sentiToken.polarity == str(1):                                
-                positiveRegex += partialRegex
+                positiveRegex.write(partialRegex.getvalue())
                 
             elif sentiToken.polarity == str(0):                
-                neutralRegex += partialRegex
+                neutralRegex.write(partialRegex.getvalue())
                 
             elif sentiToken.polarity == str(-1):                                  
-                negativeRegex += partialRegex
+                negativeRegex.write(partialRegex.getvalue())
                 
-            partialRegex = u''         
+            partialRegex = StringIO.StringIO()         
         
-        self.posSentiRegex = positiveRegex.strip('|')
-        self.neutSentiRegex = neutralRegex.strip('|')              
-        self.negSentiRegex = negativeRegex.strip('|')
+        self.posSentiRegex = positiveRegex.getvalue().strip('|')
+        self.neutSentiRegex = neutralRegex.getvalue().strip('|')              
+        self.negSentiRegex = negativeRegex.getvalue().strip('|')
     
     def inferPolarity_old(self,opinion):
         
@@ -1094,6 +1106,49 @@ class Rules:
                   hasSmiley,rule2,rule4,rule5,rule6,rule8,rule10,rule12,rule14,rule16,rule23,rule25,rule30,
                   rule1,rule3,rule7,rule9,rule11,rule13,rule15,rule17,rule18,rule19,rule20,rule21,rule22,
                   rule24,rule26,rule27,rule28,rule29]
+
+class MultiWordHandler:    
+    
+    multiWordsList = []
+    multiWordsRegex = ur""
+    
+    
+    def __init__(self,multiWordsFilePath):
+        
+        f = codecs.open(multiWordsFilePath,"r","utf-8")
+        self.multiWordsList = f.read().lower().split('\n')
+        
+        regexTemplate = ur"(?:\W?{0}\W?)|"
+        
+        buffer =  cStringIO.StringIO()
+        
+        for multiWord in self.multiWordsList:
+            
+            buffer.write(regexTemplate.format(multiWord))
+            
+            if multiWord != Utils.normalize(multiWord):
+                buffer.write(regexTemplate.format(Utils.normalize(multiWord)))
+        
+        self.multiWordsRegex = buffer.getvalue().strip('|')
+        
+    def tokenizeMultiWords(self,sentence):
+        
+        loweredSentence = sentence.lower()     
+        newSentence = loweredSentence
+        
+        matches = re.findall(self.multiWordsRegex,loweredSentence)        
+        
+        for multiWord in matches:
+                
+            cleanTokens = multiWord.strip(' ').rstrip(' ')
+            
+            if cleanTokens != "":
+            
+                multiToken = cleanTokens.replace(" ","_")
+                newSentence = newSentence.replace(cleanTokens,multiToken)                
+            
+        return newSentence        
+        
     
 def testBasicRules():
     
@@ -1414,51 +1469,11 @@ def testBasicRules():
         
         print s, "->", v 
         print "------------------"
-   """ 
-    
-if __name__ == '__main__':  
-    
-    politiciansFile = "../Resources/politicians.txt"
-    sentiTokensFile = "../Resources/sentiTokens.txt"
-    exceptTokensFile = "../Resources/SentiLexAccentExcpt.txt"
-    
-    politicians = Persons.loadPoliticians(politiciansFile)
-    sentiTokens = SentiTokens.loadSentiTokens(sentiTokensFile,exceptTokensFile)
-    
-    ruler = Rules(politicians,sentiTokens)    
-    sentenceNoMatch = u"O sócrates e passos coelho são bff"
-    
-    #s1 = [sentenceNoMatch,u" o sócrates não é uma pessoa honesta "]
-    #s2 = [sentenceNoMatch,u" o sócrates não é um tipo autoritário "]
-    #s3 = [sentenceNoMatch,u" o sócrates não é um bom político "]
-    #s4 = [sentenceNoMatch,u" o sócrates não é um mau político "]
-    #s5 = [sentenceNoMatch,u" o sócrates não é um idiota "]
-    #s6 = [sentenceNoMatch,u" o sócrates não é um embuste "] 
-    #s7 = [sentenceNoMatch,u" o sócrates não foi nada sincero "]
-    #s8 = [sentenceNoMatch,u" o sócrates não é nada parvo "]
-    #s9 = [sentenceNoMatch,u" o sócrates não foi coerente "]
-    #s10 = [sentenceNoMatch,u" o sócrates não é mentiroso "]
-    #s11 = [sentenceNoMatch,u" o sócrates não demonstrou um forte empenho "]
-    #s12 = [sentenceNoMatch,u" o sócrates não mostrou falta de coragem "]
-    #s13 = [sentenceNoMatch,u" o sócrates é um político desonesto "]
-    #s14 = [sentenceNoMatch,u" o sócrates é um tipo honesto "]
-    #s15 = [sentenceNoMatch,u" o sócrates é um mau político "]
-    #s16 = [sentenceNoMatch,u" o sócrates é um bom político "]
-    #s17 = [sentenceNoMatch,u" o sócrates é um perfeito idiota "]
-    #s18 = [sentenceNoMatch,u" o sócrates é um verdadeiro desastre "]
-    #s19 = [sentenceNoMatch,u" o sócrates é um mau perdedor "]
-    #s20 = [sentenceNoMatch,u" o sócrates é um idiota "]
-    #s21 = [sentenceNoMatch,u" o sócrates é um embuste "]
-    #s22 = [sentenceNoMatch,u" o sócrates é muito parvo "]
-    #s23 = [sentenceNoMatch,u" o sócrates foi extremamente sincero "]
-    #s24 = [sentenceNoMatch,u" o sócrates é mentiroso "]
-    #s25 = [sentenceNoMatch,u" o sócrates foi coerente "]
-    #s26 = [sentenceNoMatch,u" o idiota do sócrates "]
-    #s27 = [sentenceNoMatch,u" o sócrates revelou uma enorme falta de respeito "]
-    #s28 = [sentenceNoMatch,u" o sócrates tem falta de coragem "]
-    #s29 = [sentenceNoMatch,u" o sócrates demonstrou uma enorme arrogância "]
-    #s30 = [sentenceNoMatch,u" o sócrates demonstrou uma enorme coragem "]
-    
+    """ 
+   
+   
+    """
+   sentenceNoMatch = u"O sócrates e passos coelho são bff"
     
     heheSentences = [sentenceNoMatch,
                      u"O sócrates e passos coelho são bff hehehehe",
@@ -1495,5 +1510,65 @@ if __name__ == '__main__':
         
         print sentence, "->", v 
         print "------------------"
+
    
+   """   
+
+def testSintaticRules():
+    
+    sentenceNoMatch = u"O sócrates e passos coelho são bff"
+    s1 = [sentenceNoMatch,u" o sócrates não é uma pessoa honesta "]
+    s2 = [sentenceNoMatch,u" o sócrates não é um tipo autoritário "]
+    s3 = [sentenceNoMatch,u" o sócrates não é um bom político "]
+    s4 = [sentenceNoMatch,u" o sócrates não é um mau político "]
+    s5 = [sentenceNoMatch,u" o sócrates não é um idiota "]
+    s6 = [sentenceNoMatch,u" o sócrates não é um embuste "] 
+    s7 = [sentenceNoMatch,u" o sócrates não foi nada sincero "]
+    s8 = [sentenceNoMatch,u" o sócrates não é nada parvo "]
+    s9 = [sentenceNoMatch,u" o sócrates não foi coerente "]
+    s10 = [sentenceNoMatch,u" o sócrates não é mentiroso "]
+    s11 = [sentenceNoMatch,u" o sócrates não demonstrou um forte empenho "]
+    s12 = [sentenceNoMatch,u" o sócrates não mostrou falta de coragem "]
+    s13 = [sentenceNoMatch,u" o sócrates é um político desonesto "]
+    s14 = [sentenceNoMatch,u" o sócrates é um tipo honesto "]
+    s15 = [sentenceNoMatch,u" o sócrates é um mau político "]
+    s16 = [sentenceNoMatch,u" o sócrates é um bom político "]
+    s17 = [sentenceNoMatch,u" o sócrates é um perfeito idiota "]
+    s18 = [sentenceNoMatch,u" o sócrates é um verdadeiro desastre "]
+    s19 = [sentenceNoMatch,u" o sócrates é um mau perdedor "]
+    s20 = [sentenceNoMatch,u" o sócrates é um idiota "]
+    s21 = [sentenceNoMatch,u" o sócrates é um embuste "]
+    s22 = [sentenceNoMatch,u" o sócrates é muito parvo "]
+    s23 = [sentenceNoMatch,u" o sócrates foi extremamente sincero "]
+    s24 = [sentenceNoMatch,u" o sócrates é mentiroso "]
+    s25 = [sentenceNoMatch,u" o sócrates foi coerente "]
+    s26 = [sentenceNoMatch,u" o idiota do sócrates "]
+    s27 = [sentenceNoMatch,u" o sócrates revelou uma enorme falta de respeito "]
+    s28 = [sentenceNoMatch,u" o sócrates tem falta de coragem "]
+    s29 = [sentenceNoMatch,u" o sócrates demonstrou uma enorme arrogância "]
+    s30 = [sentenceNoMatch,u" o sócrates demonstrou uma enorme coragem "]
+
+def testRules():
+    
+    politiciansFile = "../Resources/politicians.txt"
+    sentiTokensFile = "../Resources/sentiTokens.txt"
+    exceptTokensFile = "../Resources/SentiLexAccentExcpt.txt"
+    
+    politicians = Persons.loadPoliticians(politiciansFile)
+    sentiTokens = SentiTokens.loadSentiTokens(sentiTokensFile,exceptTokensFile)
+    
+    ruler = Rules(politicians,sentiTokens)    
+
+def testMultiWords():
+    
+    tst = MultiWordHandler("../Resources/multiwords.txt")
+    
+        
+if __name__ == '__main__':  
+    
+    print "Go!"
+    
+    testMultiWords()
+    
+    print "Done!"
    

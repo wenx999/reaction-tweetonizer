@@ -5,19 +5,9 @@ Created on Apr 8, 2011
 @author: samir
 '''
 
-class Opinion:
-
-    id = ''
-    target = ''
-    irony = ''
-    polarity = ''
-    sentence = ''    
-    mention = ''
-    metadata = ''    
-    user = None
-    date = None
+class Opinion:  
      
-    def __init__(self, id, sentence, target=u'', mention=u'', polarity=u'', irony=u'',metadata=u'',user=None,date=None):        
+    def __init__(self, id, sentence, target=u'', mention=u'', polarity=u'', irony=u'',metadata=u'',user=None,date=None,taggedSentence=None):        
         
         if sentence != None and type(sentence) != unicode: 
             raise Exception("\'sentence\' (" + sentence + ") must be in unicode! Not " + str(type(sentence)))
@@ -33,18 +23,26 @@ class Opinion:
         
         if user != None and type(user) != unicode: 
             raise Exception("\'user\' (" + user + " ) must be in unicode! Not " + str(type(user)))
+        
+        if taggedSentence != None and type(taggedSentence) != unicode: 
+            raise Exception("\'taggedSentence\' (" + taggedSentence + " ) must be in unicode! Not " + str(type(taggedSentence)))
                         
         self.id = id
         self.target = target
         self.irony = irony
         self.polarity = polarity
-        self.sentence = sentence        
+        self.sentence = sentence
         self.mention = mention
         self.metadata = metadata
         self.date = date
         self.user = user
+        
+        if taggedSentence == None:
+            self.taggedSentence = sentence
+        else:
+            self.taggedSentence = taggedSentence
     
-    def clone(self,target=u'', mention=u'', polarity=u'', irony=u'',metadata=u'',user=None,date=None):        
+    def clone(self, target=u'', mention=u'', polarity=u'', irony=u'',metadata=u'',user=None,date=None,taggedSentence = None):        
         
         newTarget = self.target
         newMention = self.mention
@@ -53,6 +51,7 @@ class Opinion:
         newMetadata =  self.metadata
         newUser = self.user
         newDate = self.date
+        newTaggedSentence = self.taggedSentence
                          
         if target != None and target != '':
             newTarget = target
@@ -75,12 +74,15 @@ class Opinion:
         if date != None and date != '':
             newDate = date
         
-        return Opinion(self.id,self.sentence,newTarget,newMention,newPolarity,newIrony,newMetadata,newUser,newDate) 
+        if taggedSentence != None and taggedSentence != '':
+            newTaggedSentence = taggedSentence
+        
+        return Opinion(self.id,self.sentence,newTarget,newMention,newPolarity,newIrony,newMetadata,newUser,newDate,newTaggedSentence) 
         
             
     def tostring(self):
         
-        opinion = "id: " + str(self.id) + "\nsentence: " + self.sentence        
+        opinion = "id: " + str(self.id) + "\nsentence: " + self.sentence + "\ntagged sentence: " + self.taggedSentence         
         
         if self.target != None:
             opinion += "\ntarget: " + self.target

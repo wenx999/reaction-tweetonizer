@@ -1,0 +1,1 @@
+# -*- coding: UTF-8 -*-left_context = {u'portas': [u'as',u'nas',u'às',u'miguel',u'abriu',u'abriram',u'abre',u'abrem',u'mais',u'3',u'4',u'5',u'três',u'quatro',u'cinco']}right_context = {u'portas': [u'de',u'do',u'da',u'das',u'dos',u'abertas']}        

@@ -8,12 +8,6 @@ import codecs
 import Utils
 
 class Person:    
-
-    id = ""
-    target = ""
-    names = []
-    nicknames = []
-    ergos = []
           
     def __init__(self,id,names,nicknames,ergos,target=None):
         
@@ -21,16 +15,29 @@ class Person:
         self.names = names
         self.nicknames = nicknames
         self.ergos = ergos
+        self.listOfMentions = {}
         
         if target != None:
         
             self.target = target
         else:
-            self.target = names[0]    
+            self.target = names[0]
+        
+        for name in self.names:
+            
+            self.listOfMentions[name] = ''
+        
+        for nick in self.nicknames:
+            
+            self.listOfMentions[nick] = ''
+            
+        for ergo in self.ergos:
+            
+            self.listOfMentions[ergo] = ''    
     
     def isMatch(self,name):
         
-        return name in self.names or name in self.ergos or name in self.nicknames
+        return name in self.listOfMentions
     
     def isNickname(self,name):
         
@@ -38,21 +45,8 @@ class Person:
     
     def mentions(self):
         
-        listOfMentions = []
-        
-        for name in self.names:
-            
-            listOfMentions.append(name)
-        
-        for nick in self.nicknames:
-            
-            listOfMentions.append(nick)
-            
-        for ergo in self.ergos:
-            
-            listOfMentions.append(ergo)
-        
-        return listOfMentions
+        return list(self.listOfMentions.iterkeys())
+    
     def tostring(self):
         
         per = "id: " + self.id + "\ntarget: " + self.target + "\nnames: {"
@@ -172,6 +166,8 @@ if __name__ == "__main__":
         
         #None        
         print a.tostring()
+        for m in a.listOfMentions.iterkeys():
+            print m
         print "-----------------------"
     
     print "Done"    
