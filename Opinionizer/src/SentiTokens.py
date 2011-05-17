@@ -13,18 +13,31 @@ class SentiToken:
 
     def __init__(self,lemma,polarity,flexions=None):
     
-        self.lemma = lemma
-        self.flexions = flexions
+        self.lemma = lemma        
         self.polarity = polarity
+        self.flexions = []
         self.tokens = {} 
+                
+        multiword = lemma.replace(" ","_")
         
-        self.tokens[lemma] = ''
+        #if ' ' was replaced with '_' then it's a multiword        
+        if "_" in multiword:            
+            self.tokens[multiword] = ''
+        else:
+            self.tokens[lemma] = ''
         
         if flexions != None:
             
-            for flexion in self.flexions:
+            for flexion in flexions: 
                 
-                self.tokens[flexion] = ''        
+                multiword = flexion.replace(" ","_")
+                
+                if "_" in multiword:
+                    self.flexions.append(multiword)
+                    self.tokens[multiword] = ''
+                else:
+                    self.flexions.append(flexion)
+                    self.tokens[flexion] = ''     
         
     def tostring(self):
         
@@ -101,6 +114,22 @@ def loadSentiTokens(path,pathExceptions):
     
     return adjectives
 
+def getMultiWords(listOfSentiTokens):
+    
+    multiWords = []
+    
+    for sentiToken in listOfSentiTokens:
+        
+        tokens = sentiToken.getTokens()
+        
+        for token in tokens:
+            
+            if token.find(" ") > 0:
+                
+                multiWords.append(token)
+    
+    return multiWords
+
 def loadExceptionTokens(path): 
     
     f = codecs.open(path,"r", "utf-8")    
@@ -119,10 +148,18 @@ if __name__ == "__main__":
         
     for a in sentiTokens:
         
-        #None
+        None
         print "-----------------------"
         print a.tostring().encode("utf-8")
     
     print len(sentiTokens)
+    
+    #mws = getMultiWords(sentiTokens)
+    
+    #print "multi palavras"
+    
+   # for mw in mws:
+        
+   #     print mw
     
     print "Done"    

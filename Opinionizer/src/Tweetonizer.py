@@ -371,12 +371,12 @@ def processTweets(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFi
     print "Loading resources...\nPoliticians: " + politiciansFile + "\nSentiTokens: " + sentiTokensFile + "\nExceptTokens: " +  exceptSentiTokens
     politicians = Persons.loadPoliticians(politiciansFile)
     sentiTokens = SentiTokens.loadSentiTokens(sentiTokensFile,exceptSentiTokens)
-    naive = Naive(politicians,sentiTokens)
-    rules = Rules(politicians,sentiTokens)
-    #multiWordTokenizer = MultiWordHandler(multiWordsFile)
+    naive = Naive(politicians,sentiTokens)    
+    multiWordTokenizer = MultiWordHandler(multiWordsFile)
+    multiWordTokenizer.addMultiWords(Persons.getMultiWords(politicians))
+    multiWordTokenizer.addMultiWords(SentiTokens.getMultiWords(sentiTokens))
     
-    targetedTweets = {}
-    #taggedTweets = {}
+    targetedTweets = {}    
     classifiedTweets = {}
     
     #Process tweets...
@@ -394,23 +394,14 @@ def processTweets(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFi
                 if tweet.target not in targetedTweets:                    
                 
                     targetedTweets[tweet.target] = []
- 
+                
+                tweet.taggedSentence = multiWordTokenizer.tokenizeMultiWords(tweet.sentence)  
                 targetedTweets[tweet.target].append(tweet)
     
-    print  len(targetedTweets), " Targets Identified! Inferring polarity..."
-            
-    #for target,tweets in targetedTweets.items():
-        
-    #     for tweet in tweets:            
-            
-    #        if tweet.target not in taggedTweets:
-            
-    #           taggedTweets[tweet.target] = []
-                
-    #      taggedSentence = multiWordTokenizer.tokenizeMultiWords(tweet.sentence)            
+    print  len(targetedTweets), " targets Identified! Inferring polarity..."
     
-    #      taggedTweets[target].append(tweet.clone(taggedSentence=taggedSentence))
-
+    rules = Rules(politicians,sentiTokens)
+    
     #Second step infer polarity 
     for target,tweets in targetedTweets.items():
         
@@ -419,10 +410,10 @@ def processTweets(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFi
             if target not in classifiedTweets:
                 classifiedTweets[target]  = []
             
-            classifiedTweet = rules.inferPolarity(tweet)
+            classifiedTweet = rules.inferPolarity(tweet,True)
             
             if classifiedTweet.polarity == 0:
-                classifiedTweet = naive.inferPolarity(classifiedTweet)
+                classifiedTweet = naive.inferPolarity(classifiedTweet,True)
             
             classifiedTweets[target].append(classifiedTweet)
             

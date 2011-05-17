@@ -70,6 +70,22 @@ class Person:
         return per.strip(",\n") + "}"
         
 
+def getMultiWords(listOfPersons):
+    
+    multiWords = []
+    
+    for person in listOfPersons:
+        
+        mentions = person.mentions()
+        
+        for mention in mentions:
+            
+            if mention.find(" ") > 0:
+                
+                multiWords.append(mention)
+    
+    return multiWords
+
 def loadPoliticians(path):
     
     NAMES = 0
@@ -162,12 +178,22 @@ if __name__ == "__main__":
     
     print "Go"
     
-    for a in loadPoliticians("../Resources/politicians.txt"):
+    politicians = loadPoliticians("../Resources/politicians.txt") 
+    
+    for a in politicians:
         
         #None        
         print a.tostring()
         for m in a.listOfMentions.iterkeys():
             print m
         print "-----------------------"
+    
+    mws = getMultiWords(politicians)
+    
+    print "multi palavras:"
+    
+    for mw in mws:
+        
+        print mw 
     
     print "Done"    
