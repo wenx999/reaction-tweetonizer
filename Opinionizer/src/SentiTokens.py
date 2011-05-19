@@ -17,27 +17,29 @@ class SentiToken:
         self.polarity = polarity
         self.flexions = []
         self.tokens = {} 
-                
-        multiword = lemma.replace(" ","_")
+        
+        token = lemma.strip(' ').rstrip(' ')
+        
+        self.tokens[token] = ''        
+        multiword = token.replace(" ","_")
         
         #if ' ' was replaced with '_' then it's a multiword        
         if "_" in multiword:            
             self.tokens[multiword] = ''
-        else:
-            self.tokens[lemma] = ''
         
         if flexions != None:
             
             for flexion in flexions: 
                 
-                multiword = flexion.replace(" ","_")
+                token = flexion.strip(' ').rstrip(' ')
+                self.flexions.append(token)
+                self.tokens[token] = ''    
+                
+                multiword = token.strip(' ').rstrip(' ').replace(" ","_")
                 
                 if "_" in multiword:
                     self.flexions.append(multiword)
-                    self.tokens[multiword] = ''
-                else:
-                    self.flexions.append(flexion)
-                    self.tokens[flexion] = ''     
+                    self.tokens[multiword] = ''     
         
     def tostring(self):
         

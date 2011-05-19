@@ -23,20 +23,26 @@ class Naive:
         buffer = StringIO.StringIO()
         buffer.write(u'')
         
+        regexTemplate = ur"(?:\W{0}(?:\W|$))|"
+        
         # Build a regex for identifying targets
         for person in self.persons:            
             
             for name in person.names:
                                     
-                    buffer.write(u"\W?" + name + u"\W?|")
+                    #buffer.write(u"\W?" + name + u"\W?|")
+                    buffer.write(regexTemplate.format(name))
             
             for nickName in person.nicknames:
                     
-                    buffer.write(u"\W??" + nickName + u"\W?|")
+                    #buffer.write(u"\W??" + nickName + u"\W?|")
+                    buffer.write(regexTemplate.format(nickName))
                     
             for ergo in person.ergos:
                 
-                    buffer.write(u"\W??" + ergo + u"\W??|")
+                    #buffer.write(u"\W??" + ergo + u"\W??|")
+                    buffer.write(regexTemplate.format(ergo))
+                    
 
         self.targetsRegex = buffer.getvalue().strip('|')
         
@@ -47,7 +53,7 @@ class Naive:
             
             for token in sentiToken.getTokens():
                 
-                buffer.write("\W?" + token + "\W?|")  
+                buffer.write(regexTemplate.format(token))  
         
         self.sentiTokensRegex = buffer.getvalue().strip('|')
     
@@ -1230,8 +1236,8 @@ class MultiWordHandler:
         Builds a regex that finds multiwords in a sentence 
         Those multiwords are then concatenated with '_'
     """
-        
-    regexTemplate = ur"(?:\W?{0}\W?)|"
+    
+    regexTemplate = ur"(?:\W{0}(?:\W|$))|"
     
     def __init__(self,multiWordsFilePath):
         
@@ -1693,7 +1699,7 @@ def testSintaticRules():
 def testRules():
     
     politiciansFile = "../Resources/politicians.txt"
-    sentiTokensFile = "../Resources/sentiTokens.txt"
+    sentiTokensFile = "../Resources/sentitokens-2011-05-13.txt"
     exceptTokensFile = "../Resources/SentiLexAccentExcpt.txt"
     
     politicians = Persons.loadPoliticians(politiciansFile)
@@ -1703,9 +1709,20 @@ def testRules():
 
 def testMultiWords():
     
-    tst = MultiWordHandler("../Resources/multiwords.txt")
-    
         
+    sentiTokensFile = "../Resources/sentiTokens.txt"
+    exceptTokensFile = "../Resources/SentiLexAccentExcpt.txt"
+        
+    sentiTokens = SentiTokens.loadSentiTokens(sentiTokensFile,exceptTokensFile)
+    tst = MultiWordHandler("../Resources/multiwords.txt")
+    tst.addMultiWords(SentiTokens.getMultiWords(sentiTokens))
+    
+    #str = " Era uma vez um VSS Enterprise! que era do ,ministro do Fomento, e se transformou XiXi presidente cessante p"
+    str = " Ele era um atrasado mental Era uma vez um VSS Enterprise! que era do ,ministro do Fomento, e se transformou XiXi presidente cessante p"
+    
+    print tst.tokenizeMultiWords(str)
+    
+      
 if __name__ == '__main__':  
     
     print "Go!"
