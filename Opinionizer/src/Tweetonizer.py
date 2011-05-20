@@ -504,7 +504,7 @@ if __name__ == '__main__':
     beginDate = datetime.today() - timedelta(1)
     endDate = datetime.today()     
     politiciansFile = "../Resources/politicians.txt"
-    sentiTokensFile = "../Resources/sentitokens-2011-05-13.txt"
+    sentiTokensFile = "../Resources/sentitokens-2011-05-13.txt"    
     exceptSentiTokens = "../Resources/SentiLexAccentExcpt.txt"
     multiWordsFile = "../Resources/multiwords.txt"
     logFolder = "../Results/"

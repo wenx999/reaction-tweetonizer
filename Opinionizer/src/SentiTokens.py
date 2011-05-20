@@ -11,10 +11,11 @@ import re
 
 class SentiToken:
 
-    def __init__(self,lemma,polarity,flexions=None):
+    def __init__(self,lemma,polarity,pos,flexions=None):
     
         self.lemma = lemma        
         self.polarity = polarity
+        self.pos = pos
         self.flexions = []
         self.tokens = {} 
         
@@ -25,7 +26,16 @@ class SentiToken:
         
         #if ' ' was replaced with '_' then it's a multiword        
         if "_" in multiword:            
-            self.tokens[multiword] = ''
+            self.tokens[multiword] = ''            
+        
+        #for words with "-" generate a version without the "-"
+        #and a version "multiword friendly" (with "_" instead of " ")
+        if "-" in token and token not in self.tokens:
+            self.tokens[token.replace("-"," ")] = ''
+            self.tokens[token.replace("-","_")] = ''
+            self.flexions.append(token.replace("-"," "))
+            self.flexions.append(token.replace("-","_"))
+            
         
         if flexions != None:
             
@@ -40,10 +50,18 @@ class SentiToken:
                 if "_" in multiword:
                     self.flexions.append(multiword)
                     self.tokens[multiword] = ''     
+                
+                #for words with "-" generate a version without the "-"
+                #and a version "multiword friendly" (with "_" instead of " ")
+                if "-" in token and token not in self.tokens:
+                    self.tokens[token.replace("-"," ")] = ''
+                    self.flexions.append(token.replace("-"," "))
+                    self.flexions.append(token.replace("-","_"))
+                    self.tokens[token.replace("-","_")] = ''
         
     def tostring(self):
         
-        adj = "lemma: " + self.lemma + "\npolarity: " + self.polarity + "\nflexions: {"
+        adj = "lemma: " + self.lemma + "\npolarity: " + self.polarity + "\nPOS:" + self.pos + "\nflexions: {"
         
         for f in self.flexions:
             
@@ -68,13 +86,15 @@ def loadSentiTokens(path,pathExceptions):
     firstLine = f.next()
     exceptions = unicode(loadExceptionTokens(pathExceptions))       
     
-    lemmaRegex = ",.*?\."     
-    flexRegex = "^.*?,"
-    polarityRegex = "POL=-1|POL=0|POL=1"
+    lemmaRegex = ",(.*?)\."     
+    flexRegex = "^(.*?),"    
+    polarityRegex = "POL=(-1|0|1)"
+    posRegex = "PoS=(.*?);"
     
-    currentLemma = re.findall(lemmaRegex,firstLine)[0].lstrip(',').rstrip('.')
-    currentPolarity = re.findall(polarityRegex,firstLine)[0][4:]
-    currentFlex = re.findall(flexRegex,firstLine)[0].rstrip(',')
+    currentLemma = re.search(lemmaRegex,firstLine).group(1)
+    currentPolarity = re.search(polarityRegex,firstLine).group(1)
+    currentPos = re.search(posRegex,firstLine).group(1).lower()
+    currentFlex = re.search(flexRegex,firstLine).group(1)
     currentFlexions = []
     currentFlexions.append(currentFlex)
     
@@ -85,9 +105,9 @@ def loadSentiTokens(path,pathExceptions):
     for line in f:
         
         try:
-            if "REV=Amb" not in line:
-                                                    
-                lemma = re.findall(lemmaRegex,line)[0].lstrip(',').rstrip('.')
+            if "REV=Amb" not in line:               
+                
+                lemma = re.search(lemmaRegex,line).group(1)
                 
                 if lemma != currentLemma:            
                     
@@ -95,15 +115,21 @@ def loadSentiTokens(path,pathExceptions):
                         
                         currentFlexions.append(Utils.normalize(currentLemma))
                                 
-                    adjectives.append(SentiToken(currentLemma,currentPolarity,currentFlexions))
+                    adjectives.append(SentiToken(currentLemma,currentPolarity,currentPos,currentFlexions))
                                         
-                    currentLemma = lemma
-                    currentPolarity = re.findall(polarityRegex,line)[0][4:]                                   
+                    currentLemma = lemma                    
+                    currentPolarity = re.search(polarityRegex,line).group(1)                    
+                    currentPos = re.search(posRegex,line).group(1).lower()
                     currentFlexions = []
-                    currentFlexions.append(re.findall(flexRegex,line)[0].rstrip(','))
+                    currentFlex = re.search(flexRegex,line).group(1)
+                    currentFlexions.append(currentFlex)    
+                    
+                    if currentFlex not in exceptions and currentFlex != Utils.normalize(currentFlex):
+                        
+                        currentFlexions.append(Utils.normalize(currentFlex))
                     
                 else:   
-                    currentFlex = re.findall(flexRegex,line)[0].rstrip(',')
+                    currentFlex = re.search(flexRegex,line).group(1)
                     currentFlexions.append(currentFlex)
                     
                     if currentFlex not in exceptions and currentFlex != Utils.normalize(currentFlex):
