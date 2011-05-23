@@ -34,6 +34,10 @@ NEGATIVES = 4
 access_key_test = "284707222-ZRvtSilVFXGcEYT8AZ04STWP9q7VXofN3L3Ufx2s"
 access_secret_test = "1PkYjXaJWzSyd0K6Z4g5Wsg6NZ9iVNNOxI277ELrbqA"
 
+access_key_prod = "300277144-taeETTFSRiQLUvOc667Y84PnobK0lley8jtC4zJg"
+access_secret_prod = "tDms9BFzHAwhVmVoPbIpwdVblPHrAdxEsYJCzw4q1k"
+
+
 """ OBSOLETE 
 
 def writeResults(tweetsByTarget):
@@ -111,7 +115,7 @@ def getTweetsCSV():
 
 def usage(commandName):
     
-    print "usage: " + commandName + " [-pt (post to twitter)|-ptr (post to twitter but randomize posts)] [-pr=proxy] [-pol=politicians file] [-sent=sentiment tokens file] [-excpt=exception sentiment tokens file] [-mw=multiwords file] [-bd=begin date (yyyy-mm-dd)] [-ed=end date (yyyy-mm-dd)] [-ss=single sentence] [-ssw=single sentence and web output]"
+    print "usage: " + commandName + " [-pt (post to twitter and stats)|-ptr (post to twitter but randomize posts)|-pts (post stats only)] [-pr=proxy] [-pol=politicians file] [-sent=sentiment tokens file] [-excpt=exception sentiment tokens file] [-mw=multiwords file] [-bd=begin date (yyyy-mm-dd)] [-ed=end date (yyyy-mm-dd)] [-ss=single sentence] [-ssw=single sentence and web output]"
 
 def logClassifiedTweets(tweetsByTarget,path):
     
@@ -472,7 +476,7 @@ def printResultsWeb(results,sentence):
         
         print html.format(sentence,targets, str(results[0].polarity)).encode("utf-8")       
            
-def main(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,logFolder,beginDate,endDate,post,randomizeTweets,proxy,):       
+def main(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,logFolder,beginDate,endDate,postTwitter,postStats,randomizeTweets,proxy,):       
     
     listOfTweets = getNewTweets(beginDate,endDate,proxy)
     classifiedTweets = processTweets(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,listOfTweets)
@@ -480,15 +484,19 @@ def main(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,logFol
     stats = getStats(classifiedTweets)    
     formatedStats = formatStats(stats,len(listOfTweets),beginDate,endDate)
     
-    if post:
+    if postTwitter:
         #If randomize tweets is enabled, assume this is a test run so posts will be done in
         #the tests account
         if randomizeTweets:        
             tweetResults(formatedStats,access_key_test,access_secret_test,randomizeTweets,proxy)
         else:
-            #post results in the production account and post statistcs for the charts
-            tweetResults(formatedStats,access_key_test,access_secret_test,randomizeTweets,proxy)        
-            postResults(stats,proxy,endDate)
+            #post results in the production account
+            tweetResults(formatedStats,access_key_prod,access_secret_prod,randomizeTweets,proxy)
+            
+    if postStats:
+        #post statistcs for the charts
+        postResults(stats,proxy,endDate)
+            
     else:
         printMessages(formatedStats)
     
@@ -499,7 +507,8 @@ if __name__ == '__main__':
     
     #Default values
     proxy = None
-    post = False
+    postTwitter = False
+    postStats = False
     randomizeTweets = False
     beginDate = datetime.today() - timedelta(1)
     endDate = datetime.today()     
@@ -510,6 +519,7 @@ if __name__ == '__main__':
     logFolder = "../Results/"
     singleSentence = None
     webOutput = False
+    
     
     #Get command line parameters
     for param in sys.argv[1:]:
@@ -539,10 +549,13 @@ if __name__ == '__main__':
             webOutput = True
         elif param == "-ptr":
             print "Warning: Tweets will be randomized!"
-            post = True
+            postTwitter = True
             randomizeTweets = True
         elif param == "-pt":
-            post = True        
+            postTwitter = True
+            postStats = True        
+        elif param == "-pts":            
+            postStats = True
         else:            
             print "Error! " + param
             usage(sys.argv[0])
@@ -555,7 +568,7 @@ if __name__ == '__main__':
         beginDate = beginDate.replace(hour=19,minute=1,second=0,microsecond=0)
         endDate = endDate.replace(hour=19,minute=0,second=0,microsecond=0)
         
-        main(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,logFolder,beginDate,endDate,post,randomizeTweets,proxy)
+        main(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,logFolder,beginDate,endDate,postTwitter,postStats,randomizeTweets,proxy)
         print "Done!"
     else:
         processSingleSentence(politiciansFile, sentiTokensFile, exceptSentiTokens, singleSentence,webOutput)
