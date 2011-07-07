@@ -88,7 +88,7 @@ def loadSentiTokens(path,pathExceptions):
     
     lemmaRegex = ",(.*?)\."     
     flexRegex = "^(.*?),"    
-    polarityRegex = "POL=(-1|0|1)"
+    polarityRegex = "POL:..=(-1|0|1)(;|$)"
     posRegex = "PoS=(.*?);"
     
     currentLemma = re.search(lemmaRegex,firstLine).group(1)
@@ -108,6 +108,7 @@ def loadSentiTokens(path,pathExceptions):
             if "REV=Amb" not in line:               
                 
                 lemma = re.search(lemmaRegex,line).group(1)
+                #print re.search(lemmaRegex,line).groups()
                 
                 if lemma != currentLemma:            
                     
@@ -124,6 +125,8 @@ def loadSentiTokens(path,pathExceptions):
                     currentFlex = re.search(flexRegex,line).group(1)
                     currentFlexions.append(currentFlex)    
                     
+                    #print "L:", currentLemma,"P:",currentPolarity,"POS:",currentPos,"F:",currentFlex
+                    
                     if currentFlex not in exceptions and currentFlex != Utils.normalize(currentFlex):
                         
                         currentFlexions.append(Utils.normalize(currentFlex))
@@ -132,6 +135,7 @@ def loadSentiTokens(path,pathExceptions):
                     currentFlex = re.search(flexRegex,line).group(1)
                     currentFlexions.append(currentFlex)
                     
+                    #print "l:", lemma, "f:", currentFlex, "p:", currentPos
                     if currentFlex not in exceptions and currentFlex != Utils.normalize(currentFlex):
                         
                         currentFlexions.append(Utils.normalize(currentFlex))
@@ -171,16 +175,20 @@ if __name__ == "__main__":
     print "Go"
     
     #loadExceptionTokens("../Resources/SentiLexAccentExcpt.txt")
+    f = codecs.open("res.txt","w","utf-8")
     
-    sentiTokens = loadSentiTokens("../Resources/sentitokens-2011-05-13.txt","../Resources/SentiLexAccentExcpt.txt")
+    sentiTokens = loadSentiTokens("../Resources/sentiTokens-2011-05-30.txt","../Resources/SentiLexAccentExcpt.txt")
         
     for a in sentiTokens:
         
         None
         print "-----------------------"
-        print a.tostring().encode("utf-8")
+        print a.tostring().encode("utf-8")        
+        #f.write(a.tostring().encode("utf-8"))
+        #f.write("\n-----------------------\n")
     
     print len(sentiTokens)
+    f.close()
     
     #mws = getMultiWords(sentiTokens)
     

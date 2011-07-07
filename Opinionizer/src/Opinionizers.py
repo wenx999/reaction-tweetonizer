@@ -209,8 +209,8 @@ class Naive:
 class Rules:
 
     
-    QUANT = [u'muito', u'muitíssimo', u'pouco', u'pouquíssimo', u'bastante',
-             u'completamente', u'imensamente', u'estupidamente', u'demasiado', 
+    QUANT = [u'muito',u'muita', u'muitíssimo',u'muitíssima', u'pouco',u'pouca', u'pouquíssimo',u'pouquíssima',
+             u'bastante',u'completamente', u'imensamente', u'estupidamente', u'demasiado', 
              u'profundamente', u'perfeitamente', u'relativamente', u'simplesmente', 
              u'verdadeiramente', u'inteiramente', u'realmente', 
              u'sempre', u'mais', u'bem', u'altamente', u'extremamente', u'mesmo', 
@@ -453,15 +453,31 @@ class Rules:
                 return opinion.clone(polarity=result[0],metadata=info)
             
         return opinion.clone(polarity=0)
+
+    def generateFeatureSet(self,opinion):
+        
+        featureSet = []
+        
+        for rule in self.setOfRules:
+            
+            result = rule(self,opinion,False)
+            
+            if result != None:
+             
+                featureSet.append(result[0])
+            else:
+                featureSet.append(0)
+                
+        return featureSet
     
     def hasNickName(self,opinion,useTaggedSentence):
         
         info = "Nickname: "
         
         mention = opinion.mention.lower()
-        person = self.persons[mention]
         
-        if person != None:
+        try:
+            person = self.persons[mention]
             
             if person.isNickname(mention):
                 
@@ -469,13 +485,14 @@ class Rules:
                 return (-1,info)
             else:
                 return None
-        else:
+        except KeyError:
+            
             return None
     
     def hasLol(self,opinion,useTaggedSentence):
         
         info = "LOL: "        
-        regex = r'(l+o+l+(o+)?)+'
+        regex = r'(\W|^)(l+o+l+(o+)?)+(\W|$)'
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -495,7 +512,7 @@ class Rules:
     def hasSmiley(self,opinion,useTaggedSentence): 
         
         info = "Smiley: "        
-        regex = r'([\W ])[:;xX8]-?([\)\(psd])+'
+        regex = r'(\W|^)([\W ])[:;xX8]-?([\)\(psd])+.?'
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -515,7 +532,28 @@ class Rules:
     def hasHehe(self,opinion,useTaggedSentence): 
         
         info = "Haha: "        
-        regex = r'(h[e|a|i]+){2,}|(h[e|a|i] ?){2,}|([a|e]h ?){2,}'
+        regex = r'(\W|^)(h[e|a|i]+){2,}|(h[e|a|i] ?){2,}|([a|e]h ?){2,}(\W|$)'
+        
+        if useTaggedSentence:
+            sentence = opinion.taggedSentence.lower()
+        else:
+            sentence = opinion.sentence.lower()
+        
+        match = re.search(regex,sentence)
+    
+        if match != None:
+            
+            info += match.group()
+                        
+            return (-1,info)    
+            
+        else:
+            return None
+    
+    def hasQuotedSentiment(self,opinion,useTaggedSentence): 
+        
+        info = "Quoted sentiment: "        
+        regex = ur'(\W|^)\".*({0}|{1}).*\"(\W|$)'.format(self.adjsPosRegex,self.nounsPosRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -536,7 +574,7 @@ class Rules:
     def hasHeavyPunctuation(self,opinion,useTaggedSentence): 
         
         info = "Heavy Punctuation: "        
-        regex = r'.?([!?]{2,})+'
+        regex = r'(\W|^)([!?]{2,})+.?'
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -579,8 +617,8 @@ class Rules:
         
         info = u"Interjection with target: "        
         target = opinion.mention.lower()
-        regexTargetLeft = ur'{0} nunca mais|{0} jamais'.format(target)
-        regexTargetRight = ur'oh {0}|obrigado {0}|senhor {0}|anti-{0}'.format(target)
+        regexTargetLeft = ur'(\W|^){0} (nunca mais|jamais)(\W|$)'.format(target)
+        regexTargetRight = ur'(\W|^)(oh|obrigado|senhor|anti-|este|esse){0}(\W|$)'.format(target)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -611,10 +649,12 @@ class Rules:
     
     def rule1(self,opinion,useTaggedSentence):
         
+        "(\W|^){0}(\W|$)"
+        
         """ Ex: não é uma pessoa honesta """
         
         info = u'Regra \"não [VCOP] um|uma [NCLAS] [AJD+] ? Neg\"-> '        
-        regex = ur'.?não ({0}) (um|uma) ({1}) ({2}).?'.format(self.vcopRegex,self.nclasRegex,self.adjsPosRegex)
+        regex = ur'(\W|^)não ({0}) (um|uma) ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.nclasRegex,self.adjsPosRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -637,7 +677,7 @@ class Rules:
         """ Ex: não é um tipo autoritário """
         
         info = u'Regra \"não [VCOP] um [NCLAS] [AJD-] ? Pos"\"-> '        
-        regex = ur'.?não ({0}) (um|uma) ({1}) ({2}).?'.format(self.vcopRegex,self.nclasRegex,self.adjsNegRegex)
+        regex = ur'(\W|^)não ({0}) (um|uma) ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.nclasRegex,self.adjsNegRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -660,7 +700,7 @@ class Rules:
         """ Ex: não é um bom político """
         
         info = u'Regra \"não [VCOP] um [AJD+] [NCLAS] ?Neg\""-> '        
-        regex = ur'.?não ({0}) (um|uma) ({1}) ({2}).?'.format(self.vcopRegex,self.adjsPosRegex,self.nclasRegex)
+        regex = ur'(\W|^)não ({0}) (um|uma) ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.adjsPosRegex,self.nclasRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -683,7 +723,7 @@ class Rules:
         """ Ex: não é um mau político """
         
         info = u'Regra \"não [VCOP] um [AJD-] [NCLAS] ?Pos\""-> '        
-        regex = ur'.?não ({0}) (um|uma) ({1}) ({2}).?'.format(self.vcopRegex,self.adjsNegRegex,self.nclasRegex)
+        regex = ur'(\W|^)não ({0}) (um|uma) ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.adjsNegRegex,self.nclasRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -706,7 +746,7 @@ class Rules:
         """ Ex: não é um idiota """
         
         info = u'Regra \"não [VCOP] um [AJD-] ? Pos\""-> '        
-        regex = ur'.?não ({0}) (um|uma) ({1}).?'.format(self.vcopRegex,self.adjsNegRegex)
+        regex = ur'(\W|^)não ({0}) (um|uma) ({1})(\W|$)'.format(self.vcopRegex,self.adjsNegRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -729,7 +769,7 @@ class Rules:
         """ Ex: não é um embuste """
         
         info = u'Regra \"não [VCOP] um [N-] ? Pos\""-> '        
-        regex = ur'.?não ({0}) (um|uma) ({1}).?'.format(self.vcopRegex,self.nounsNegRegex)
+        regex = ur'(\W|^)não ({0}) (um|uma) ({1})(\W|$)'.format(self.vcopRegex,self.nounsNegRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -752,7 +792,7 @@ class Rules:
         """ Ex: não foi nada sincero """
         
         info = u'Regra \"não [VCOP] [QUANT] [Adj+] ? Neg\""-> '        
-        regex = ur'.?não ({0}) ({1}) ({2}).?'.format(self.vcopRegex,self.quantRegex,self.adjsPosRegex)
+        regex = ur'(\W|^)não ({0}) ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.quantRegex,self.adjsPosRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -775,7 +815,7 @@ class Rules:
         """ Ex: não é nada parvo """
         
         info = u'Regra \"não [VCOP] [QUANT] [Adj-] ? Pos\""-> '        
-        regex = ur'.?não ({0}) ({1}) ({2}).?'.format(self.vcopRegex,self.quantRegex,self.adjsNegRegex)
+        regex = ur'(\W|^)não ({0}) ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.quantRegex,self.adjsNegRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -798,7 +838,7 @@ class Rules:
         """ Ex: não foi coerente """
         
         info = u'Regra \"não [VCOP] [Adj+] ? Neg\""-> '        
-        regex = ur'.?não ({0}) ({1}).?'.format(self.vcopRegex,self.adjsPosRegex)
+        regex = ur'(\W|^)não ({0}) ({1})(\W|$)'.format(self.vcopRegex,self.adjsPosRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -821,7 +861,7 @@ class Rules:
         """ Ex: não é mentiroso """
         
         info = u'Regra \"não [VCOP] [Adj-] ? Pos\""-> '        
-        regex = ur'.?não ({0}) ({1}).?'.format(self.vcopRegex,self.adjsNegRegex)
+        regex = ur'(\W|^)não ({0}) ({1})(\W|$)'.format(self.vcopRegex,self.adjsNegRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -844,7 +884,7 @@ class Rules:
         """ Ex: não demonstrou um forte empenho """
         
         info = u'Regra \"não [VSUP] (um+uma) [ADJ+|0] [N+] ? Neg\""-> '        
-        regex = ur'.?não ({0}) (um|uma) ({1}|{2}) ({3}).?'.format(self.vsupRegex,self.adjsPosRegex,self.adjsNeutRegex,self.nounsPosRegex)
+        regex = ur'(\W|^)não ({0}) (um|uma) ({1}|{2}) ({3})(\W|$)'.format(self.vsupRegex,self.adjsPosRegex,self.adjsNeutRegex,self.nounsPosRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -867,7 +907,7 @@ class Rules:
         """ Ex: não mostrou falta de coragem """
         
         info = u'Regra \"não [VSUP] falta de [N+] ? Pos\""-> '        
-        regex = ur'.?não ({0}) falta de ({1}).?'.format(self.vsupRegex,self.nounsPosRegex)
+        regex = ur'(\W|^)não ({0}) falta de ({1})(\W|$)'.format(self.vsupRegex,self.nounsPosRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -890,7 +930,7 @@ class Rules:
         """ Ex:  é um político desonesto """
         
         info = u'Regra \"[VCOP] um [NCLAS] [AJD-] ? Neg\""-> '        
-        regex = ur'.?({0}) um ({1}) ({2}).?'.format(self.vcopRegex,self.nclasRegex,self.adjsNegRegex)
+        regex = ur'(\W|^)({0}) um ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.nclasRegex,self.adjsNegRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -913,7 +953,7 @@ class Rules:
         """ Ex:  é um tipo honesto """
         
         info = u'Regra \"[VCOP] um [NCLAS] [AJD+] ? Pos\""-> '        
-        regex = ur'.?({0}) um ({1}) ({2}).?'.format(self.vcopRegex,self.nclasRegex,self.adjsPosRegex)
+        regex = ur'(\W|^)({0}) um ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.nclasRegex,self.adjsPosRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -936,7 +976,7 @@ class Rules:
         """ Ex:  é um mau político """
         
         info = u'Regra \"[VCOP] um [AJD-] [NCLAS] ?Neg\""-> '        
-        regex = ur'.?({0}) um ({1}) ({2}).?'.format(self.vcopRegex,self.adjsNegRegex,self.nclasRegex)
+        regex = ur'(\W|^)({0}) um ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.adjsNegRegex,self.nclasRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -959,7 +999,7 @@ class Rules:
         """ Ex:  é um bom político """
         
         info = u'Regra \"[VCOP] um [AJD+] [NCLAS] ?Pos\""-> '        
-        regex = ur'.?({0}) um ({1}) ({2}).?'.format(self.vcopRegex,self.adjsPosRegex,self.nclasRegex)
+        regex = ur'(\W|^)({0}) um ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.adjsPosRegex,self.nclasRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -982,7 +1022,7 @@ class Rules:
         """ Ex: é um perfeito idiota """
         
         info = u'Regra \"[VCOP] um [AJD+] [AJD-] ? Neg\""-> '        
-        regex = ur'.?({0}) um ({1}) ({2}).?'.format(self.vcopRegex,self.adjsPosRegex,self.adjsNegRegex)
+        regex = ur'(\W|^)({0}) um ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.adjsPosRegex,self.adjsNegRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -1005,7 +1045,7 @@ class Rules:
         """ Ex: é um verdadeiro desastre """
         
         info = u'Regra \"[VCOP] um [AJD+] [N-] ? Neg\""-> '        
-        regex = ur'.?({0}) um ({1}) ({2}).?'.format(self.vcopRegex,self.adjsPosRegex,self.nounsNegRegex)
+        regex = ur'(\W|^)({0}) um ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.adjsPosRegex,self.nounsNegRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -1028,7 +1068,7 @@ class Rules:
         """ Ex: é um mau perdedor """
         
         info = u'Regra \"[VCOP] um [AJD-] [AJD-] ? Neg\""-> '        
-        regex = ur'.?({0}) um ({1}) ({2}).?'.format(self.vcopRegex,self.adjsNegRegex,self.adjsNegRegex)
+        regex = ur'(\W|^)({0}) um ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.adjsNegRegex,self.adjsNegRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -1051,7 +1091,7 @@ class Rules:
         """ Ex: é um idiota """
         
         info = u'Regra \"[VCOP] um [AJD-] ? Neg\""-> '        
-        regex = ur'.?({0}) um ({1}).?'.format(self.vcopRegex,self.adjsNegRegex)
+        regex = ur'(\W|^)({0}) um ({1})(\W|$)'.format(self.vcopRegex,self.adjsNegRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -1074,7 +1114,7 @@ class Rules:
         """ Ex: é um embuste """
         
         info = u'Regra \"[VCOP] um [N-] ? Neg\""-> '        
-        regex = ur'.?({0}) um ({1}).?'.format(self.vcopRegex,self.nounsNegRegex)
+        regex = ur'(\W|^)({0}) um ({1})(\W|$)'.format(self.vcopRegex,self.nounsNegRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -1097,7 +1137,7 @@ class Rules:
         """ Ex: é muito parvo """
         
         info = u'Regra \"[VCOP] [QUANT] [Adj-] ? Pos\""-> '        
-        regex = ur'.?({0}) ({1}) ({2}).?'.format(self.vcopRegex,self.quantRegex,self.adjsNegRegex)
+        regex = ur'(\W|^)({0}) ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.quantRegex,self.adjsNegRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -1120,7 +1160,7 @@ class Rules:
         """ Ex: foi extremamente sincero """
         
         info = u'Regra \"[VCOP] [QUANT] [Adj+] ? Pos\""-> '        
-        regex = ur'.?({0}) ({1}) ({2}).?'.format(self.vcopRegex,self.quantRegex,self.adjsPosRegex)
+        regex = ur'(\W|^)({0}) ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.quantRegex,self.adjsPosRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -1143,7 +1183,7 @@ class Rules:
         """ Ex: é mentiroso """
         
         info = u'Regra \"[VCOP] [Adj-] ? Neg\""-> '        
-        regex = ur'.?({0}) ({1}).?'.format(self.vcopRegex,self.adjsNegRegex)
+        regex = ur'(\W|^)({0}) ({1})(\W|$)'.format(self.vcopRegex,self.adjsNegRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -1166,7 +1206,7 @@ class Rules:
         """ Ex: foi coerente """
         
         info = u'Regra \"[VCOP] [Adj+] ? Pos\""-> '        
-        regex = ur'.?({0}) ({1}).?'.format(self.vcopRegex,self.adjsPosRegex)
+        regex = ur'(\W|^)({0}) ({1})(\W|$)'.format(self.vcopRegex,self.adjsPosRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -1191,7 +1231,7 @@ class Rules:
         target = opinion.mention.lower()
         
         info = u'Regra \"o [ADJ-] do TARGET ? Neg\""-> '        
-        regex = ur'.?o ({0}) do {1}.?'.format(self.adjsNegRegex,target)
+        regex = ur'(\W|^)o ({0}) do {1}(\W|$)'.format(self.adjsNegRegex,target)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -1214,7 +1254,7 @@ class Rules:
         """ Ex: revelou uma enorme falta de respeito """
         
         info = u'Regra \"[VSUP] (um+uma) [ADJ+|0] falta de [N+] ? Neg\""-> '        
-        regex = ur'.?({0}) (um|uma) ({1}|{2}) falta de ({3}).?'.format(self.vsupRegex,self.adjsPosRegex,self.adjsNeutRegex,self.nounsPosRegex)
+        regex = ur'(\W|^)({0}) (um|uma) ({1}|{2}) falta de ({3})(\W|$)'.format(self.vsupRegex,self.adjsPosRegex,self.adjsNeutRegex,self.nounsPosRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -1237,7 +1277,7 @@ class Rules:
         """ Ex: tem falta de coragem """
         
         info = u'Regra \"[VSUP] falta de [N+] ? Neg\""-> '        
-        regex = ur'.?({0}) falta de ({1}).?'.format(self.vsupRegex,self.nounsPosRegex)
+        regex = ur'(\W|^)({0}) falta de ({1})(\W|$)'.format(self.vsupRegex,self.nounsPosRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -1260,7 +1300,7 @@ class Rules:
         """ Ex: demonstrou uma enorme arrogância """
         
         info = u'Regra \"[VSUP] (um+uma+0) [ADJ+|0] [N-] ? Neg\""-> '        
-        regex = ur'.?({0}) (um|uma) ({1}|{2}) ({3}).?'.format(self.vsupRegex,self.adjsPosRegex,self.adjsNeutRegex,self.nounsNegRegex)
+        regex = ur'(\W|^)({0}) (um|uma) ({1}|{2}) ({3})(\W|$)'.format(self.vsupRegex,self.adjsPosRegex,self.adjsNeutRegex,self.nounsNegRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -1283,7 +1323,7 @@ class Rules:
         """ Ex: demonstrou uma enorme coragem """
         
         info = u'Regra \"[VSUP] (um+uma+0) [ADJ+|0] [N-] ? Neg\""-> '        
-        regex = ur'.?({0}) (um|uma) ({1}|{2}) ({3}).?'.format(self.vsupRegex,self.adjsPosRegex,self.adjsNeutRegex,self.nounsNegRegex)
+        regex = ur'(\W|^)({0}) (um|uma) ({1}|{2}) ({3})(\W|$)'.format(self.vsupRegex,self.adjsPosRegex,self.adjsNeutRegex,self.nounsPosRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -1303,10 +1343,10 @@ class Rules:
     
     def rule31(self,opinion,useTaggedSentence):
             
-        """ Ex: não mente OU não agiu de má-fé """
+        """ Ex: não engana OU não agiu de má-fé """
         
         info = u'Regra \"não|nunca [V-]|[IDIOM-] ? Pos\""-> '        
-        regex = ur'.?(não|nunca) ({0}).?'.format(self.idiomNegRegex)
+        regex = ur'(\W|^)(não|nunca) ({0}|{1})(\W|$)'.format(self.idiomNegRegex,self.verbNegRegex)
     
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -1329,7 +1369,7 @@ class Rules:
         """ Ex: não está a mentir """
         
         info = u'Regra \"não|nunca [VCOP] a [V-] ? Pos\""-> '        
-        regex = ur'.?(não|nunca) ({0}) a ({1}).?'.format(self.vcopRegex,self.verbNegRegex)
+        regex = ur'(\W|^)(não|nunca) ({0}) a ({1})(\W|$)'.format(self.vcopRegex,self.verbNegRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -1354,8 +1394,8 @@ class Rules:
         """ Ex: não brilhou OU não agiu da boa-fé """
         
         info = u'Regra \"não|nunca [V+]|[IDIOM+] ? Neg\""-> '        
-        regex = ur'.?(não|nunca) ({0}|{1}).?'.format(self.verbPosRegex,self.idiomPosRegex)
-        
+        regex = ur'(\W|^)(não|nunca) ({0}|{1})(\W|$)'.format(self.verbPosRegex,self.idiomPosRegex)
+              
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
         else:
@@ -1378,7 +1418,7 @@ class Rules:
         """ Ex: não se atrapalhou OU não se espetou ao comprido """
         
         info = u'Regra \"não|nunca se [V-]|[IDIOM-] ? Pos\""-> '        
-        regex = ur'.?(não|nunca) se ({0}|{1}).?'.format(self.verbNegRegex,self.idiomNegRegex)
+        regex = ur'(\W|^)(não|nunca) se ({0}|{1})(\W|$)'.format(self.verbNegRegex,self.idiomNegRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -1402,7 +1442,7 @@ class Rules:
         """ Ex: não|nunca se sacrificar OU não se saiu bem"""
         
         info = u'Regra \"não|nunca se [V+]|[IDIOM+] ? Neg\""-> '        
-        regex = ur'.?(não|nunca) se ({0}|{1}).?'.format(self.verbPosRegex,self.idiomPosRegex)
+        regex = ur'(\W|^)(não|nunca) se ({0}|{1})(\W|$)'.format(self.verbPosRegex,self.idiomPosRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -1420,13 +1460,37 @@ class Rules:
         else:
             return None
 
+    #--------------#
+    def rule37(self,opinion,useTaggedSentence):
+        
+        """ Ex: não ter (muita|0) contestação """
+        
+        info = u'Regra \"não [VSUP] [QUANT|0] [N-] ? Pos\""-> '
+        regex = ur'(\W|^)não ({0}) (({1}) )?({2})(\W|$)'.format(self.vsupRegex,self.quantRegex,self.nounsNegRegex)
+        
+        if useTaggedSentence:
+            sentence = opinion.taggedSentence.lower()
+        else:
+            sentence = opinion.sentence.lower()
+         
+        match = re.search(regex,sentence)
+        
+        if match != None:
+            
+            info += match.group() 
+            
+            return (1,info) 
+            
+        else:
+            return None        
+   
 
-    def rule36(self,opinion,useTaggedSentence):
+    def rule38(self,opinion,useTaggedSentence):
         
-        """ Ex: não se sacrificar"""
+        """ Ex: não ter (muito|0) talento """
         
-        info = u'Regra \"não se [V+] ? Neg\""-> '        
-        regex = ur'.?não se ({0}).?'.format(self.verbPosRegex)
+        info = u'Regra \"não [VSUP] [QUANT|0] [N+] ? Neg\""-> '
+        regex = ur'(\W|^)não ({0}) (({1}) )?({2})(\W|$)'.format(self.vsupRegex,self.quantRegex,self.nounsPosRegex)
         
         if useTaggedSentence:
             sentence = opinion.taggedSentence.lower()
@@ -1442,14 +1506,86 @@ class Rules:
             return (-1,info) 
             
         else:
-            return None
+            return None       
 
+
+    def rule39(self,opinion,useTaggedSentence):
         
-    setOfRules = [hasNickName,hasInterjectionWithTarget,hasInterjection,hasLol,hasHehe,hasHeavyPunctuation,
-                  hasSmiley,rule2,rule4,rule5,rule6,rule8,rule10,rule12,rule14,rule16,rule23,rule25,rule30,
-                  rule1,rule3,rule7,rule9,rule11,rule13,rule15,rule17,rule18,rule19,rule20,rule21,rule22,
-                  rule24,rule26,rule27,rule28,rule29,rule30,rule31,rule32,rule33,rule34,rule35,rule36]
+        """ Ex: ter (muita|0) coragem"""
+        
+        info = u'Regra \"[VSUP] [QUANT|0] [N+] ? Pos\""-> ' 
+        regex = ur'(\W|^)({0}) (({1}) )?({2})(\W|$)'.format(self.vsupRegex,self.quantRegex,self.nounsPosRegex)
+        
+        if useTaggedSentence:
+            sentence = opinion.taggedSentence.lower()
+        else:
+            sentence = opinion.sentence.lower()
+         
+        match = re.search(regex,sentence)
+        
+        if match != None:
+            
+            info += match.group() 
+            
+            return (1,info) 
+            
+        else:
+            return None 
+      
 
+    def rule40(self,opinion,useTaggedSentence):
+        
+        """ Ex: ter (muito|0) medo"""
+        
+        info = u'Regra \"[VSUP] [QUANT|0] [N-] ? Neg\""-> '
+        regex = ur'(\W|^)({0}) (({1}) )?({2})(\W|$)'.format(self.vsupRegex,self.quantRegex,self.nounsNegRegex)
+        
+        if useTaggedSentence:
+            sentence = opinion.taggedSentence.lower()
+        else:
+            sentence = opinion.sentence.lower()
+         
+        match = re.search(regex,sentence)
+        
+        if match != None:
+            
+            info += match.group() 
+            
+            return (-1,info) 
+            
+        else:
+            return None        
+
+
+    def rule41(self,opinion,useTaggedSentence):
+        
+        """ Ex: falta de coragem"""
+        
+        info = u'Regra \"falta de [N+] ? Neg\""-> ' 
+        regex = ur'(\W|^)falta de ({0})(\W|$)'.format(self.nounsPosRegex)
+        
+        if useTaggedSentence:
+            sentence = opinion.taggedSentence.lower()
+        else:
+            sentence = opinion.sentence.lower()
+         
+        match = re.search(regex,sentence)
+        
+        if match != None:
+            
+            info += match.group() 
+            
+            return (-1,info) 
+            
+        else:
+            return None  
+
+                
+    setOfRules = setOfRules = [hasNickName,hasInterjectionWithTarget,hasInterjection,hasLol,hasHehe,hasHeavyPunctuation,
+                  hasSmiley,hasQuotedSentiment,rule27,rule4,rule3,rule2,rule1,rule12,rule11,rule14,rule5,rule13,rule16,rule15,
+                  rule17,rule18,rule19,rule6,rule8,rule7,rule30,rule29,rule28,rule37,rule38,rule39,rule40,        
+                  rule10,rule9,rule20,rule21,rule23,rule22,rule25,rule24,rule26,rule32,rule31,rule34,rule35,rule33, rule41]                    
+    
 class MultiWordHandler:
     
     """
@@ -1629,6 +1765,26 @@ def testLOL():
         print sentence, "->", v 
         print "------------------"
 
+def testQuotedSentiment():
+    
+    sentenceNoMatch = u"O sócrates e passos coelho são bff"
+    
+    quotedSentences = [sentenceNoMatch,
+                        u"O sócrates e passos são \"bons\" politicos",
+                        u"O sócrates é um \"gajo bem bonito\" acho eu"                   
+                      ] 
+    
+    ruler = getTestRuler()
+    
+    for sentence in quotedSentences:
+    
+        o = Opinion(1,sentence,u"socrates",u"socras",0,None,u"Manual",u"Manual",None)
+        
+        v = ruler.hasQuotedSentiment(o,False)
+        
+        print sentence, "->", v 
+        print "------------------"
+
 def testHaha():
     
     sentenceNoMatch = u"O sócrates e passos coelho são bff"
@@ -1797,8 +1953,8 @@ def testSintaticRules():
     
     sentenceNoMatch = u"O sócrates e passos coelho são bff"
     
-    s1 = [sentenceNoMatch,u" o sócrates não é uma pessoa honesta "]
-    s2 = [sentenceNoMatch,u" o sócrates não é um tipo autoritário "]
+    s1 = [sentenceNoMatch,u" o sócrates não é uma pessoa honesta ",u"o sócrates não é uma pessoa honesta"]
+    s2 = [sentenceNoMatch,u" o sócrates não é um tipo autoritário ",u"o sócrates não é um tipo autoritário"]
     s3 = [sentenceNoMatch,u" o sócrates não é um bom político "]
     s4 = [sentenceNoMatch,u" o sócrates não é um mau político "]
     s5 = [sentenceNoMatch,u" o sócrates não é um idiota "]
@@ -1828,13 +1984,28 @@ def testSintaticRules():
     s29 = [sentenceNoMatch,u" o sócrates demonstrou uma enorme arrogância "]
     s30 = [sentenceNoMatch,u" o sócrates demonstrou uma enorme coragem "]
     
-    ruler = getTestRuler()
-    
-    for sentence in s1:
-    
-        o = Opinion(1,sentence,u"socrates",u"socras",0,None,u"Manual",u"Manual",None)
+    s31 = [sentenceNoMatch,u" o sócrates não engana ",u" o sócrates não agiu de má-fé " ]
+    s32 = [sentenceNoMatch,u" o sócrates não está a papaguear "]
+    s33 = [sentenceNoMatch,u" o sócrates não brilhou ",u" o     sócrates não agiu de boa-fé "]
+    s34 = [sentenceNoMatch,u" o sócrates não se atrapalhou ",u" o sócrates não espetou-se ao comprido "]
+    s35 = [sentenceNoMatch,u" o sócrates não se sacrificou ",u" o sócrates não se saiu bem "]
+    s37 = [sentenceNoMatch,u" o sócrates não tem muita susceptibilidade ",u" o sócrates não tem susceptibilidade "]
+    s38 = [sentenceNoMatch,u" o sócrates não tem muito talento ",u" o sócrates não tem talento "]
+    s39 = [sentenceNoMatch,u" o sócrates não tem muita coragem ",u" o sócrates não tem coragem "]    
+    s40 = [sentenceNoMatch,u" o sócrates tem muito medo ",u" o sócrates tem medo "]
+    s41 = [sentenceNoMatch,u" o sócrates tem falta de coragem ",u" o sócrates tem falta de alegria "]
         
-        v = ruler.hasHeavyPunctuation(o)
+    
+    ruler = getTestRuler()
+    #mw = getMultiWordsHandler()    
+    
+    for sentence in s41:
+    
+        o = Opinion(1,sentence,u"socrates",u"sócrates",0,None,u"Manual",u"Manual",None)
+        #o.taggedSentence = mw.tokenizeMultiWords(sentence)
+        #print "tagged: ", o.taggedSentence
+        #v = ruler.rule33(o,False)
+        v = ruler.rule41(o,True)
         
         print sentence, "->", v 
         print "------------------"
@@ -1842,14 +2013,29 @@ def testSintaticRules():
 def getTestRuler():
 
     politiciansFile = "../Resources/politicians.txt"
-    sentiTokensFile = "../Resources/sentitokens-2011-05-13.txt"
+    sentiTokensFile = "../Resources/sentiTokens-2011-05-30.txt"
     exceptTokensFile = "../Resources/SentiLexAccentExcpt.txt"
     
     politicians = Persons.loadPoliticians(politiciansFile)
     sentiTokens = SentiTokens.loadSentiTokens(sentiTokensFile,exceptTokensFile)
     
     return Rules(politicians,sentiTokens)    
+
+def getMultiWordsHandler():
     
+    politiciansFile = "../Resources/politicians.txt"
+    sentiTokensFile = "../Resources/sentiTokens-2011-05-24.txt"
+    exceptTokensFile = "../Resources/SentiLexAccentExcpt.txt"
+    multiWordsFile = "../Resources/multiwords.txt"
+    
+    politicians = Persons.loadPoliticians(politiciansFile)
+    sentiTokens = SentiTokens.loadSentiTokens(sentiTokensFile,exceptTokensFile)
+        
+    multiWordTokenizer = MultiWordHandler(multiWordsFile)
+    multiWordTokenizer.addMultiWords(Persons.getMultiWords(politicians))
+    multiWordTokenizer.addMultiWords(SentiTokens.getMultiWords(sentiTokens))    
+    
+    return multiWordTokenizer
 
 def testMultiWords():
     
@@ -1871,7 +2057,7 @@ if __name__ == '__main__':
     
     print "Go!"
     
-    testInterjection()
+    testSintaticRules()
     
     print "Done!"
    
