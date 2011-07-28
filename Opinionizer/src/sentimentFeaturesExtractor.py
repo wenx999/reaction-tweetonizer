@@ -4,9 +4,13 @@ import csv
 import codecs
 import Persons
 import SentiTokens
+import os
+import glob
+
 
 TWEETS = "/home/samir/TwitometroCorpus/teste.csv"
 GOLD_STANDARD = "/home/samir/TwitometroCorpus/tweets_GoldStandard_teste.csv"
+SOURCE_PATH = "../Results/"
 
 ID = 0
 TARGET = 2 
@@ -38,9 +42,10 @@ def generateFeatures(isGoldStandard, sourceFile, destinyFile):
     featuresFile = csv.writer(open(destinyFile,"w"),delimiter='|') 
     
     for t in listOfTweets:
-        
+                
         featureSet = rulesClassifier.generateFeatureSet(t)
         featureSet.append(naiveClassifier.inferPolarity(t,False).polarity)
+        featureSet.insert(0, t.id)
         
         if isGoldStandard:
                 
@@ -71,12 +76,21 @@ def getNaiveClassifier():
     
     return Opinionizers.Naive(politicians,sentiTokens)    
 
+def processFiles():
+    
+    for infile in glob.glob( os.path.join(SOURCE_PATH, '*.csv') ):
+
+        baseFileName = os.path.basename(infile)
+        
+        print "processing ", infile, "..."
+
 
 if __name__ == '__main__':
     
     print "GO"
     
-    generateFeatures(True,GOLD_STANDARD,"tweets_gold.csv")
-    generateFeatures(False,TWEETS,"tweets_corpus.csv")
+    processFiles()
+    #generateFeatures(True,GOLD_STANDARD,"tweets_gold.csv")
+    #generateFeatures(False,TWEETS,"tweets_corpus.csv")
     
     print "Done!"
