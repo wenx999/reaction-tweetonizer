@@ -653,7 +653,7 @@ class Rules:
         
         """ Ex: não é uma pessoa honesta """
         
-        info = u'Regra \"não [VCOP] um|uma [NCLAS] [AJD+] ? Neg\"-> '        
+        info = u'Regra \"não [VCOP] um/uma [NCLAS] [AJD+] ? Neg\"-> '        
         regex = ur'(\W|^)não ({0}) (um|uma) ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.nclasRegex,self.adjsPosRegex)
         
         if useTaggedSentence:
@@ -883,7 +883,7 @@ class Rules:
         
         """ Ex: não demonstrou um forte empenho """
         
-        info = u'Regra \"não [VSUP] (um+uma) [ADJ+|0] [N+] ? Neg\""-> '        
+        info = u'Regra \"não [VSUP] (um+uma) [ADJ+/0] [N+] ? Neg\""-> '        
         regex = ur'(\W|^)não ({0}) (um|uma) ({1}|{2}) ({3})(\W|$)'.format(self.vsupRegex,self.adjsPosRegex,self.adjsNeutRegex,self.nounsPosRegex)
         
         if useTaggedSentence:
@@ -1253,7 +1253,7 @@ class Rules:
         
         """ Ex: revelou uma enorme falta de respeito """
         
-        info = u'Regra \"[VSUP] (um+uma) [ADJ+|0] falta de [N+] ? Neg\""-> '        
+        info = u'Regra \"[VSUP] (um+uma) [ADJ+/0] falta de [N+] ? Neg\""-> '        
         regex = ur'(\W|^)({0}) (um|uma) ({1}|{2}) falta de ({3})(\W|$)'.format(self.vsupRegex,self.adjsPosRegex,self.adjsNeutRegex,self.nounsPosRegex)
         
         if useTaggedSentence:
@@ -1299,7 +1299,7 @@ class Rules:
         
         """ Ex: demonstrou uma enorme arrogância """
         
-        info = u'Regra \"[VSUP] (um+uma+0) [ADJ+|0] [N-] ? Neg\""-> '        
+        info = u'Regra \"[VSUP] (um+uma+0) [ADJ+/0] [N-] ? Neg\""-> '        
         regex = ur'(\W|^)({0}) (um|uma) ({1}|{2}) ({3})(\W|$)'.format(self.vsupRegex,self.adjsPosRegex,self.adjsNeutRegex,self.nounsNegRegex)
         
         if useTaggedSentence:
@@ -1322,7 +1322,7 @@ class Rules:
         
         """ Ex: demonstrou uma enorme coragem """
         
-        info = u'Regra \"[VSUP] (um+uma+0) [ADJ+|0] [N-] ? Neg\""-> '        
+        info = u'Regra \"[VSUP] (um+uma+0) [ADJ+/0] [N-] ? Neg\""-> '        
         regex = ur'(\W|^)({0}) (um|uma) ({1}|{2}) ({3})(\W|$)'.format(self.vsupRegex,self.adjsPosRegex,self.adjsNeutRegex,self.nounsPosRegex)
         
         if useTaggedSentence:
@@ -1345,7 +1345,7 @@ class Rules:
             
         """ Ex: não engana OU não agiu de má-fé """
         
-        info = u'Regra \"não|nunca [V-]|[IDIOM-] ? Pos\""-> '        
+        info = u'Regra \"não\nunca [V-]\[IDIOM-] ? Pos\""-> '        
         regex = ur'(\W|^)(não|nunca) ({0}|{1})(\W|$)'.format(self.idiomNegRegex,self.verbNegRegex)
     
         if useTaggedSentence:
@@ -1368,7 +1368,7 @@ class Rules:
         
         """ Ex: não está a mentir """
         
-        info = u'Regra \"não|nunca [VCOP] a [V-] ? Pos\""-> '        
+        info = u'Regra \"não/nunca [VCOP] a [V-] ? Pos\""-> '        
         regex = ur'(\W|^)(não|nunca) ({0}) a ({1})(\W|$)'.format(self.vcopRegex,self.verbNegRegex)
         
         if useTaggedSentence:
@@ -1393,7 +1393,7 @@ class Rules:
         
         """ Ex: não brilhou OU não agiu da boa-fé """
         
-        info = u'Regra \"não|nunca [V+]|[IDIOM+] ? Neg\""-> '        
+        info = u'Regra \"não/nunca [V+]/[IDIOM+] ? Neg\""-> '        
         regex = ur'(\W|^)(não|nunca) ({0}|{1})(\W|$)'.format(self.verbPosRegex,self.idiomPosRegex)
               
         if useTaggedSentence:
@@ -1417,7 +1417,7 @@ class Rules:
         
         """ Ex: não se atrapalhou OU não se espetou ao comprido """
         
-        info = u'Regra \"não|nunca se [V-]|[IDIOM-] ? Pos\""-> '        
+        info = u'Regra \"não/nunca se [V-]/[IDIOM-] ? Pos\""-> '        
         regex = ur'(\W|^)(não|nunca) se ({0}|{1})(\W|$)'.format(self.verbNegRegex,self.idiomNegRegex)
         
         if useTaggedSentence:
@@ -1441,7 +1441,7 @@ class Rules:
         
         """ Ex: não|nunca se sacrificar OU não se saiu bem"""
         
-        info = u'Regra \"não|nunca se [V+]|[IDIOM+] ? Neg\""-> '        
+        info = u'Regra \"não/nunca se [V+]/[IDIOM+] ? Neg\""-> '        
         regex = ur'(\W|^)(não|nunca) se ({0}|{1})(\W|$)'.format(self.verbPosRegex,self.idiomPosRegex)
         
         if useTaggedSentence:
@@ -1465,7 +1465,7 @@ class Rules:
         
         """ Ex: não ter (muita|0) contestação """
         
-        info = u'Regra \"não [VSUP] [QUANT|0] [N-] ? Pos\""-> '
+        info = u'Regra \"não [VSUP] [QUANT/0] [N-] ? Pos\""-> '
         regex = ur'(\W|^)não ({0}) (({1}) )?({2})(\W|$)'.format(self.vsupRegex,self.quantRegex,self.nounsNegRegex)
         
         if useTaggedSentence:
@@ -1489,7 +1489,7 @@ class Rules:
         
         """ Ex: não ter (muito|0) talento """
         
-        info = u'Regra \"não [VSUP] [QUANT|0] [N+] ? Neg\""-> '
+        info = u'Regra \"não [VSUP] [QUANT/0] [N+] ? Neg\""-> '
         regex = ur'(\W|^)não ({0}) (({1}) )?({2})(\W|$)'.format(self.vsupRegex,self.quantRegex,self.nounsPosRegex)
         
         if useTaggedSentence:
@@ -1513,7 +1513,7 @@ class Rules:
         
         """ Ex: ter (muita|0) coragem"""
         
-        info = u'Regra \"[VSUP] [QUANT|0] [N+] ? Pos\""-> ' 
+        info = u'Regra \"[VSUP] [QUANT/0] [N+] ? Pos\""-> ' 
         regex = ur'(\W|^)({0}) (({1}) )?({2})(\W|$)'.format(self.vsupRegex,self.quantRegex,self.nounsPosRegex)
         
         if useTaggedSentence:
@@ -1537,7 +1537,7 @@ class Rules:
         
         """ Ex: ter (muito|0) medo"""
         
-        info = u'Regra \"[VSUP] [QUANT|0] [N-] ? Neg\""-> '
+        info = u'Regra \"[VSUP] [QUANT/0] [N-] ? Neg\""-> '
         regex = ur'(\W|^)({0}) (({1}) )?({2})(\W|$)'.format(self.vsupRegex,self.quantRegex,self.nounsNegRegex)
         
         if useTaggedSentence:

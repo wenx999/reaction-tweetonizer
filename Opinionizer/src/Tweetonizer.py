@@ -115,7 +115,7 @@ def getTweetsCSV():
 
 def usage(commandName):
     
-    print "usage: " + commandName + " [-pt (post to twitter and stats)|-ptr (post to twitter but randomize posts)|-pts (post stats only)] [-pr=proxy] [-pol=politicians file] [-sent=sentiment tokens file] [-excpt=exception sentiment tokens file] [-mw=multiwords file] [-bd=begin date (yyyy-mm-dd)] [-ed=end date (yyyy-mm-dd)] [-ss=single sentence] [-ssw=single sentence and web output]"
+    print "usage: " + commandName + " [-pt (post to twitter and stats)|-ptr (post to twitter but randomize posts)|-pts (post stats only)] [-pr=proxy] [-pol=politicians file] [-sent=sentiment tokens file] [-excpt=exception sentiment tokens file] [-mw=multiwords file] [-bd=begin date (yyyy-mm-dd)] [-ed=end date (yyyy-mm-dd)] [-ss=single sentence] [-ssw=single sentence and web output] [-log=log file] [-excpt=ex"
 
 def logClassifiedTweets(tweetsByTarget,path):
     
@@ -138,7 +138,7 @@ def logClassifiedTweets(tweetsByTarget,path):
             sentence = tweet.sentence.replace("|","\\").replace("\n"," ").replace("\t"," ").replace("\r"," ")
             taggedSentence = tweet.taggedSentence.replace("|","\\").replace("\n"," ").replace("\t"," ").replace("\r"," ")
             
-            f.write(tweet.id + "|" + tweet.user + "|\"" + target  + "\"|\"" + mention + "\"|" + str(tweet.polarity ) + "|\"" + metadata +  "\"|\"" + sentence + "\"|\"" + taggedSentence + "\"\n")
+            f.write("\""+str(tweet.id) + "\"|" + tweet.user + "|\"" + target  + "\"|\"" + mention + "\"|" + str(tweet.polarity ) + "|\"" + metadata +  "\"|\"" + sentence + "\"|\"" + taggedSentence + "\"\n")
     
     f.close()
 
@@ -256,7 +256,8 @@ def getNewTweets(beginDate,endDate,proxy):
                                                    urllib.quote(endDate.strftime('%Y-%m-%d %H:%M'))))
     
     #Read the JSON response
-    jsonTwitter = simplejson.loads(unicode(twitterData.read().decode("utf-8")))  
+    jsonTwitter = simplejson.loads(unicode(twitterData.read().decode("utf-8"))) 
+      
     listOfTweets = []
     
     #Build a dictionary
@@ -393,6 +394,7 @@ def processTweets(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFi
         
         if tweetsWithTarget != None :
             
+            #a tweet can have multiple targets (in that case the message is replicated)
             for tweet in tweetsWithTarget:
             
                 if tweet.target not in targetedTweets:                    
@@ -414,8 +416,10 @@ def processTweets(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFi
             if target not in classifiedTweets:
                 classifiedTweets[target]  = []
             
+            #try to classify with rules...
             classifiedTweet = rules.inferPolarity(tweet,True)
             
+            #if not possible use the naive classifier
             if classifiedTweet.polarity == 0:
                 classifiedTweet = naive.inferPolarity(classifiedTweet,True)
             

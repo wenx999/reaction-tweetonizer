@@ -8,15 +8,18 @@ import os
 import glob
 
 
-TWEETS = "/home/samir/TwitometroCorpus/teste.csv"
+#TWEETS = "/home/samir/TwitometroCorpus/teste.csv"
+#TWEETS = "/home/samir/corpusSoft.csv"
+TWEETS = "/home/samir/tweetscorpus.csv"
 GOLD_STANDARD = "/home/samir/TwitometroCorpus/tweets_GoldStandard_teste.csv"
 SOURCE_PATH = "../Results/"
+DESTINY_PATH = "../Results/Features/"
 
-ID = 0
-TARGET = 2 
-MENTION = 3
-SENTIMENT_POLARITY = 4 
-TEXT = 6
+ID = 1
+TARGET = 3 
+MENTION = 4
+SENTIMENT_POLARITY = 5 
+TEXT = 7
 
 def generateFeatures(isGoldStandard, sourceFile, destinyFile):
     
@@ -26,15 +29,18 @@ def generateFeatures(isGoldStandard, sourceFile, destinyFile):
     
     for tweet in corpus:
         
-        # sentence, target=u'', mention=u'', polarity=u'', irony=u'',metadata=u'',user=None,date=None,taggedSentence=None)
+        #skip the first line
+        if tweet[0] != 'DATE':
         
-        o = Opinion(id = tweet[ID],
-                    sentence = unicode(tweet[TEXT]),
-                    target = unicode(tweet[TARGET]),
-                    mention = unicode(tweet[MENTION]),
-                    polarity = int(tweet[SENTIMENT_POLARITY]))
-        
-        listOfTweets.append(o)
+            o = Opinion(id = tweet[ID],
+                        sentence = unicode(tweet[TEXT]),
+                        target = unicode(tweet[TARGET]),
+                        mention = unicode(tweet[MENTION]),
+                        polarity = int(tweet[SENTIMENT_POLARITY]))
+            
+            listOfTweets.append(o)
+    
+    print "tweets loaded..."
          
     rulesClassifier = getRulesClassifier()
     naiveClassifier = getNaiveClassifier()
@@ -82,15 +88,16 @@ def processFiles():
 
         baseFileName = os.path.basename(infile)
         
-        print "processing ", infile, "..."
+        print "processing ", baseFileName, "..."
+        generateFeatures(False,infile,DESTINY_PATH+baseFileName.replace(".csv","")+"_feats.csv")        
 
 
 if __name__ == '__main__':
     
     print "GO"
     
-    processFiles()
+    #processFiles()
     #generateFeatures(True,GOLD_STANDARD,"tweets_gold.csv")
-    #generateFeatures(False,TWEETS,"tweets_corpus.csv")
+    generateFeatures(False,TWEETS,"tweets_corpusfeatures.csv")
     
     print "Done!"

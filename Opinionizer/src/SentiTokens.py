@@ -184,18 +184,9 @@ if __name__ == "__main__":
         None
         print "-----------------------"
         print a.tostring().encode("utf-8")        
-        #f.write(a.tostring().encode("utf-8"))
-        #f.write("\n-----------------------\n")
+    
     
     print len(sentiTokens)
     f.close()
-    
-    #mws = getMultiWords(sentiTokens)
-    
-    #print "multi palavras"
-    
-   # for mw in mws:
-        
-   #     print mw
-    
+       
     print "Done"    
