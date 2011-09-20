@@ -11,13 +11,10 @@ import time
 import Persons 
 import SentiTokens
 from Opinionizers import Naive,Rules,MultiWordHandler
-import operator
-import xml.dom.minidom
 import urllib2
 import urllib
 import simplejson
 from Opinion import Opinion
-import csv
 import codecs
 import twitter
 import os
@@ -441,7 +438,7 @@ def processSingleSentence(politiciansFile,sentiTokensFile,exceptSentiTokens,sent
         for target in targets:
             
             rules = Rules(politicians,sentiTokens)
-            results.append(rules.inferPolarity(target))
+            results.append(rules.inferPolarity(target, False))
     
     if webOutput:
         return printResultsWeb(results,sentence)
