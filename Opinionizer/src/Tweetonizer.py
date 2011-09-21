@@ -370,13 +370,18 @@ def processTweets(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFi
          tweets -> list of tweets
     """
     
-    print "Loading resources...\nPoliticians: " + politiciansFile + "\nSentiTokens: " + sentiTokensFile + "\nExceptTokens: " +  exceptSentiTokens
+    print "Loading resources...\nPoliticians: " + politiciansFile   
     politicians = Persons.loadPoliticians(politiciansFile)
+    
+    print "SentiTokens: " + sentiTokensFile + "\nExceptTokens: " +  exceptSentiTokens
     sentiTokens = SentiTokens.loadSentiTokens(sentiTokensFile,exceptSentiTokens)
-    naive = Naive(politicians,sentiTokens)    
+    
+    print "Multiword Tokenizer " + multiWordsFile    
     multiWordTokenizer = MultiWordHandler(multiWordsFile)
     multiWordTokenizer.addMultiWords(Persons.getMultiWords(politicians))
     multiWordTokenizer.addMultiWords(SentiTokens.getMultiWords(sentiTokens))
+    
+    naive = Naive(politicians,sentiTokens)    
     
     targetedTweets = {}    
     classifiedTweets = {}
@@ -425,21 +430,31 @@ def processTweets(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFi
     return classifiedTweets
 
 def processSingleSentence(politiciansFile,sentiTokensFile,exceptSentiTokens,sentence,webOutput):
-        
+            
+    print "Loading resources...\nPoliticians: " + politiciansFile    
     politicians = Persons.loadPoliticians(politiciansFile)
+    
+    print "SentiTokens: " + sentiTokensFile + "\nExceptTokens: " +  exceptSentiTokens
     sentiTokens = SentiTokens.loadSentiTokens(sentiTokensFile,exceptSentiTokens)
+    
     naive = Naive(politicians,sentiTokens)
     
     singleSentence = Opinion(1, sentence=sentence)
     targets = naive.inferTarget(singleSentence)
     results = []
     
+    print "Inferring targets..."
+        
     if targets != None:    
+        
+        print "Inferring polarity..."
+        
         for target in targets:
             
             rules = Rules(politicians,sentiTokens)
             results.append(rules.inferPolarity(target, False))
-    
+    else:
+        print "No targets were identified..."
     if webOutput:
         return printResultsWeb(results,sentence)
     else:
