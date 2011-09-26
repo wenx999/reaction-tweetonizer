@@ -34,82 +34,6 @@ access_secret_test = "1PkYjXaJWzSyd0K6Z4g5Wsg6NZ9iVNNOxI277ELrbqA"
 access_key_prod = "300277144-taeETTFSRiQLUvOc667Y84PnobK0lley8jtC4zJg"
 access_secret_prod = "tDms9BFzHAwhVmVoPbIpwdVblPHrAdxEsYJCzw4q1k"
 
-
-""" OBSOLETE 
-
-def writeResults(tweetsByTarget):
-    
-    resultsFolder = "./OpinionizedTweets/"
-    
-    for target,tweets in tweetsByTarget.items():        
-                
-        doc = xml.dom.minidom.Document()
-        
-        root = doc.createElement("Opinionizer")
-        root.setAttribute("target", target)
-        root.setAttribute("numberOfTweets", str(len(tweets)))
-        doc.appendChild(root)       
-        
-        tweets.sort(key=operator.attrgetter("date"),reverse=True)
-        
-        currentDate = None
-        currentNode = None
-        
-        for opinion in tweets: 
-            
-            if opinion.date != currentDate:
-                currentDate = opinion.date
-                currentNode = doc.createElement("Tweets")
-                currentNode.setAttribute("date",str(opinion.date))
-                root.appendChild(currentNode)                
-            
-            comment = doc.createElement("tweet")
-            comment.setAttribute("id",str(opinion.id))
-            
-            if opinion.target != None:
-                comment.setAttribute("target",opinion.target)          
-
-            if opinion.polarity != None:    
-                comment.setAttribute("polarity",str(opinion.polarity))
-             
-            commentText = doc.createTextNode(opinion.sentence)
-            
-            comment.appendChild(commentText)
-            currentNode.appendChild(comment)
-        
-        doc.writexml( open(resultsFolder+target, 'w'),
-                indent="  ",
-                addindent="  ",
-                newl='\n',
-                encoding="utf-8")
-    
-        doc.unlink()
-        
-def getTweetsCSV():
-    
-    USER_ID = 0
-    STATUS_ID = 1
-    CREATED_AT = 2
-    TWEET = 3
-    
-    listOfTweets = {}
-    
-    reader = csv.reader(codecs.open("tweets.csv","r","utf-8"), delimiter=',')  
-    
-    for tweet in reader:
-        
-        try:
-            id = tweet[USER_ID] + "_" + tweet[STATUS_ID]
-            date =  datetime.strptime(tweet[CREATED_AT].split(' ')[0], '%Y-%m-%d')
-            
-            listOfTweets[id] = Opinion(id,unicode(tweet[TWEET]),date=date)
-        except IndexError:
-            continue
-        
-    return listOfTweets        
-
- OBSOLETE """
-
 def usage(commandName):
     
     print "usage: " + commandName + " [-pt (post to twitter and stats)|-ptr (post to twitter but randomize posts)|-pts (post stats only)] [-pr=proxy] [-pol=politicians file] [-sent=sentiment tokens file] [-excpt=exception sentiment tokens file] [-mw=multiwords file] [-bd=begin date (yyyy-mm-dd)] [-ed=end date (yyyy-mm-dd)] [-ss=single sentence] [-ssw=single sentence and web output] [-log=log file] [-excpt=ex"
@@ -232,26 +156,33 @@ def getNewTweets(beginDate,endDate,proxy):
     top_level_url = "http://robinson.fe.up.pt/cgi-bin/twitter_crawl/get_tweets.pl"
     requestTweets = "http://robinson.fe.up.pt/cgi-bin/twitter_crawl/get_tweets.pl?begin_date={0}&end_date={1}&format=JSON&limit=all"
     #requestTweets = "http://robinson.fe.up.pt/cgi-bin/twitter_crawl/get_tweets.pl?begin_date=2011-04-10&end_date=2011-04-12%2001:00:00&format=JSON"
+    twitterData = None
     
-    #Password manager because the service requires authentication
-    password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
-    password_mgr.add_password(None, top_level_url, username, password)
-    auth_handler = urllib2.HTTPBasicAuthHandler(password_mgr)
-    opener = None
+    #Read data from the stdin
+    if beginDate.strftime('%Y') == "1900":
+        print "Getting Tweets from STDIN ..."
+        twitterData = sys.stdin;
     
-    if proxy != None:
-    
-        proxy_handler = urllib2.ProxyHandler({'http': proxy})        
-        opener = urllib2.build_opener(auth_handler,proxy_handler)       
-    else:
-        opener = urllib2.build_opener(auth_handler)
-    
-    print "Requesting: " + requestTweets.format(urllib.quote(beginDate.strftime('%Y-%m-%d %H:%M')),
-                                                urllib.quote(endDate.strftime('%Y-%m-%d %H:%M')))
-    
-    twitterData = opener.open(requestTweets.format(urllib.quote(beginDate.strftime('%Y-%m-%d %H:%M')),
-                                                   urllib.quote(endDate.strftime('%Y-%m-%d %H:%M'))))
-    
+    else:        
+        #Password manager because the service requires authentication
+        password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
+        password_mgr.add_password(None, top_level_url, username, password)
+        auth_handler = urllib2.HTTPBasicAuthHandler(password_mgr)
+        opener = None        
+        
+        if proxy != None:
+        
+            proxy_handler = urllib2.ProxyHandler({'http': proxy})        
+            opener = urllib2.build_opener(auth_handler,proxy_handler)       
+        else:
+            opener = urllib2.build_opener(auth_handler)
+        
+        print "Requesting: " + requestTweets.format(urllib.quote(beginDate.strftime('%Y-%m-%d %H:%M')),
+                                                    urllib.quote(endDate.strftime('%Y-%m-%d %H:%M')))
+        
+        twitterData = opener.open(requestTweets.format(urllib.quote(beginDate.strftime('%Y-%m-%d %H:%M')),
+                                                       urllib.quote(endDate.strftime('%Y-%m-%d %H:%M'))))
+        
     #Read the JSON response
     jsonTwitter = simplejson.loads(unicode(twitterData.read().decode("utf-8"))) 
       
