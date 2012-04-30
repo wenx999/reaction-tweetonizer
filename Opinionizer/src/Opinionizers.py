@@ -266,7 +266,7 @@ class Rules:
         self.nclasRegex = self.getRegexFromList(self.NCLAS)
         self.vsupRegex = self.getRegexFromList(self.VSUP)
         self.populateSentiRegexes(sentiTokens)
-    
+            
     def getRegexFromList(self,list):
         
         """
@@ -444,7 +444,7 @@ class Rules:
     def inferPolarity(self,opinion,useTaggedSentence):
         
         for rule in self.setOfRules:
-            
+
             result = rule(self,opinion,useTaggedSentence)
             
             if result != None:

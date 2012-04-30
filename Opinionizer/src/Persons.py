@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 '''
 Created on Apr 12, 2011
 
@@ -6,6 +8,8 @@ Created on Apr 12, 2011
 
 import codecs
 import Utils
+
+debug = False
 
 class Person:    
           
@@ -86,23 +90,33 @@ def getMultiWords(listOfPersons):
     
     return multiWords
 
-def loadPoliticians(path):
+def loadPoliticians(filename):
+    # this function to be deprecated. Please invoke loadTargetsFromFile below
+    return loadTargetsFromFile(filename)
+
+def loadTargetsFromFile(filename):
+    # load targets, their names, nicknames and ergonyms from given file into an array of three lists.
+    # returns the array.
+    # names with accents and cedilla are duplicated after normalization, except if escaped with ^.
+    #
     
     NAMES = 0
     NICKNAMES = 1
     ERGOS = 2
     
-    f = codecs.open(path,"r", "utf-8")
+    f = codecs.open(filename,"r", "utf-8")
     
-    politicians = []
-    
-    #The first line contains the exceptions
-    exceptions = f.next().lower()
-   
+    targets = []
     
     for fileLine in f:
         
-        line = fileLine.lower()   
+        line = fileLine.lower()
+
+
+        # lines starting with "#" are skipped -- mjs 2011.10.27
+        if line[0] == '#':
+            if debug: print "skipped: ", line
+            continue
         
         sepIndex = line.find(":")
         id = line[0:sepIndex]
@@ -110,7 +124,7 @@ def loadPoliticians(path):
         names = []
         nicknames = []
         ergos = []
-        
+
         if id != None and id != '':
         
             mentions = line[sepIndex+1:].split(';') 
@@ -122,14 +136,20 @@ def loadPoliticians(path):
                 for name in namesTokens.split(','):                    
                     
                     cleanName = name.replace("\n","").strip(' ').rstrip(' ')
+
+                    if debug: print "cleanName = ", cleanName
                     
                     if cleanName != '':
-                        names.append(cleanName)
+                        if cleanName[0] != '^':
+                            names.append(cleanName)
+                            if cleanName != Utils.normalize(cleanName): 
+                                names.append(Utils.normalize(cleanName))
+                                if debug: print "appended clean name", cleanName
+
+                        else:
+                            names.append(cleanName[1:])
+                            if debug: print "appended unclean name", cleanName,  cleanName[1:]
                        
-                        if cleanName not in exceptions and cleanName != Utils.normalize(cleanName): 
-                       
-                            names.append(Utils.normalize(cleanName))
-            
             except IndexError:
                 None
             
@@ -138,14 +158,22 @@ def loadPoliticians(path):
                 
                 for name in nicknamesTokens.split(','):
                     
-                    cleanName = name.replace("\n","").strip(' ').rstrip(' ')                    
-                    
-                    if cleanName != '' and len(cleanName) > 1:
-                        nicknames.append(cleanName)
-                        
-                        if cleanName not in exceptions and cleanName != Utils.normalize(cleanName): 
-                            nicknames.append(Utils.normalize(cleanName))
-                    
+                    cleanName = name.replace("\n","").strip(' ').rstrip(' ')
+
+                    if debug: print "cleanName (nickname) = ", cleanName
+
+
+                    if cleanName != '':
+                        if cleanName[0] != '^':
+                            nicknames.append(cleanName)
+                            if cleanName != Utils.normalize(cleanName): 
+                                nicknames.append(Utils.normalize(cleanName))
+                                if debug: print "appended clean nickname", cleanName, Utils.normalize(cleanName)
+
+                        else:
+                            nicknames.append(cleanName[1:])
+                            if debug: print "appended uncleaned nickname ", cleanName, cleanName[1:]
+
             except IndexError:
                 None
                 
@@ -153,47 +181,59 @@ def loadPoliticians(path):
                 ergoTokens = mentions[ERGOS]
                 
                 for name in ergoTokens.split(','):
-                    
                     cleanName = name.replace("\n","").strip(' ').rstrip(' ')
-                    
+
+                    if debug: print "cleanName (ergonym) = ", cleanName
+
+
                     if cleanName != '':
-                        ergos.append(cleanName)
-                        
-                        if cleanName not in exceptions and cleanName != Utils.normalize(cleanName): 
-                            
-                            ergos.append(Utils.normalize(cleanName))     
+                        if cleanName[0] != '^':
+                            ergos.append(cleanName)
+                            if cleanName != Utils.normalize(cleanName): 
+                                ergos.append(Utils.normalize(cleanName))
+                                if debug: print "appended clean ergonym", cleanName, Utils.normalize(cleanName)
+
+                        else:
+                            ergos.append(cleanName[1:])  
+                            if debug: print "appended uncleaned ergonym", cleanName, cleanName[1:],
             
             except IndexError:
                 None
                    
-            politicians.append(Person(id,names,nicknames,ergos))
+            targets.append(Person(id,names,nicknames,ergos))
                 
     f.close()
 
-    return politicians
+    return targets
 
 
     
 if __name__ == "__main__":        
+
+    debug = True
     
-    print "Go"
+    targetsFilename = "../Resources/politicians.txt"
     
-    politicians = loadPoliticians("../Resources/politicians.txt") 
+    print "Go, persons file is ", targetsFilename
     
-    for a in politicians:
+    targets = loadTargetsFromFile(targetsFilename) 
+
+    print "...loaded"
+    
+    for a in targets:
         
-        #None        
+        print "**** target: "
+
         print a.tostring()
+
         for m in a.listOfMentions.iterkeys():
             print m
-        print "-----------------------"
     
-    mws = getMultiWords(politicians)
     
-    print "multi palavras:"
+    print "------ multi palavras: ------"
     
-    for mw in mws:
+    for mw in getMultiWords(targets):
         
         print mw 
     
-    print "Done"    
+    print "Done."    
