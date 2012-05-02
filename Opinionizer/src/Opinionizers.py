@@ -96,7 +96,7 @@ class Naive:
             Params: opinion -> Opinion object
             Returns: tuple(inferred target, algorithm metadata)
         """
-        
+       
         info = u"Targets: "
         specialChars = u' “”\"@)(!#;&:\\@/-_,?.«»\'~ ' 
         sentence = opinion.sentence.lower()
@@ -129,9 +129,10 @@ class Naive:
                 for target,mention in targets.items():
                     
                     results.append(opinion.clone(target=target,mention=mention,metadata=info))
-                    
+                 
                 return results
             else:
+                
                 return None
                      
                 
@@ -157,7 +158,6 @@ class Naive:
                     useTaggedSentence -> True to use the tagged (and tokenized) version of the sentence
             Returns: tuple(inferred polarity, algorithm metadata)
         """
-        
         info = opinion.metadata + "; " + u'sentiTokens:'       
         specialChars = u' “”\"@)(!#;&:\\@/-_,?.«»\' ' 
         
@@ -202,8 +202,8 @@ class Naive:
         elif score < 0:
             polarity = -1
         else:
-            polarity = 0
-            
+            polarity = 0            
+                    
         return opinion.clone(polarity=polarity,metadata=info)
 
 class Rules:
@@ -259,13 +259,22 @@ class Rules:
    
     def __init__(self,persons,sentiTokens):
     
-        self.persons = self.buildPersonsDict(persons)        
+        print "inside rules"
+        print "load persons"
+        self.persons = self.buildPersonsDict(persons)  
+        print "load sentiTokens"              
         self.sentiTokens = sentiTokens
+        print "load quantRegex"
         self.quantRegex = self.getRegexFromList(self.QUANT)
+        print "load vcopRegex"
         self.vcopRegex = self.getRegexFromList(self.VCOP)
+        print "load nclasRegex"
         self.nclasRegex = self.getRegexFromList(self.NCLAS)
+        print "load vsupRegex"
         self.vsupRegex = self.getRegexFromList(self.VSUP)
+        print "load populateRegexes"
         self.populateSentiRegexes(sentiTokens)
+        print "done rules"
             
     def getRegexFromList(self,list):
         
@@ -444,14 +453,15 @@ class Rules:
     def inferPolarity(self,opinion,useTaggedSentence):
         
         for rule in self.setOfRules:
-
+            print rule
             result = rule(self,opinion,useTaggedSentence)
             
             if result != None:
              
                 info = opinion.metadata + ";" + result[1]
                 return opinion.clone(polarity=result[0],metadata=info)
-            
+        
+        print "End inferring by rules"     
         return opinion.clone(polarity=0)
 
     def generateFeatureSet(self,opinion):
