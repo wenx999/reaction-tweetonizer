@@ -10,7 +10,7 @@ from datetime import datetime,timedelta
 import time
 import Persons 
 import SentiTokens
-from Opinionizers import Naive,Rules,MultiWordHandler
+from Opinionizers import Naive,Rules,Rules2,MultiWordHandler
 import urllib2
 import urllib
 import simplejson
@@ -353,7 +353,7 @@ def processSingleSentence(politiciansFile,sentiTokensFile,exceptSentiTokens,sent
         
         for target in targets:
             
-            rules = Rules(politicians,sentiTokens)
+            rules = Rules2(politicians,sentiTokens)
             
             #if not possible to classify with rules use the naive classifier
             classifiedTweet = rules.inferPolarity(target, False)
@@ -363,7 +363,7 @@ def processSingleSentence(politiciansFile,sentiTokensFile,exceptSentiTokens,sent
             
             results.append(classifiedTweet)
     else:
-        print "<br>No targets were identified...<br>"
+        print "No targets were identified..."
     if webOutput:
         return printResultsWeb(results,sentence)
     else:
@@ -440,8 +440,24 @@ def main(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,logFol
     logFilename = logFolder + "tweets"+str(beginDate.month)+str(beginDate.day)+str(endDate.day)+".csv"
     logClassifiedTweets(classifiedTweets.itervalues(),logFilename)
 
+def testPerformanceSingleSentence():
+    
+    politiciansFile = "../Resources/politicians.txt"
+    sentiTokensFile = "../Resources/sentiTokens-2011-05-30.txt"    
+    exceptSentiTokens = "../Resources/SentiLexAccentExcpt.txt"
+    webOutput = False
+    
+    singleSentence = u"O pinócrates tem falta de maturidade e não é parvo"
+    
+    t0 = time.time()
+    processSingleSentence(politiciansFile, sentiTokensFile, exceptSentiTokens, singleSentence,webOutput)
+    t1 = time.time()
+    
+    print "\nDone in:" + str(t1-t0)
+    
 if __name__ == '__main__':   
     
+
     #Default values
     proxy = None
     realTime = None
@@ -537,5 +553,4 @@ if __name__ == '__main__':
         print "Done!"
     else:
         processSingleSentence(politiciansFile, sentiTokensFile, exceptSentiTokens, singleSentence,webOutput)
-                
-    
+
