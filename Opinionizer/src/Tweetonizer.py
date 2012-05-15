@@ -10,7 +10,7 @@ from datetime import datetime,timedelta
 import time
 import Persons 
 import SentiTokens
-from Opinionizers import Naive,Rules,Rules2,MultiWordHandler
+from Opinionizers import Naive,Rules,MultiWordHandler
 import urllib2
 import urllib
 import simplejson
@@ -353,7 +353,7 @@ def processSingleSentence(politiciansFile,sentiTokensFile,exceptSentiTokens,sent
         
         for target in targets:
             
-            rules = Rules2(politicians,sentiTokens)
+            rules = Rules(politicians,sentiTokens)
             
             #if not possible to classify with rules use the naive classifier
             classifiedTweet = rules.inferPolarity(target, False)

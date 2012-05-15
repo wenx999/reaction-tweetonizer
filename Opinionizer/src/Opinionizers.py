@@ -205,6 +205,75 @@ class Naive:
             polarity = 0            
                     
         return opinion.clone(polarity=polarity,metadata=info)
+                   
+    
+class MultiWordHandler:
+    
+    """
+        Handles the tokenization of multiwords from "x y" to "x_y"
+        Builds a regex that finds multiwords in a sentence 
+        Those multiwords are then concatenated with '_'
+    """
+    
+    regexTemplate = ur"(?:\W{0}(?:\W|$))|"
+    
+    def __init__(self,multiWordsFilePath):
+        
+        self.multiWordsRegex = ur""
+        
+        f = codecs.open(multiWordsFilePath,"r","utf-8")
+        multiWordsList = f.read().lower().split('\n')
+        
+        self.addMultiWords(multiWordsList)
+        
+    def tokenizeMultiWords(self,sentence):
+        
+        """
+            Finds multiwords in a sentence and
+            concatenates them with '_'
+        
+        """
+        
+        loweredSentence = sentence.lower()     
+        newSentence = loweredSentence
+        
+        matches = re.findall(self.multiWordsRegex,loweredSentence)        
+        
+        for multiWord in matches:
+                
+            cleanTokens = multiWord.strip(' ').rstrip(' ')
+            
+            if cleanTokens != "":
+            
+                multiToken = cleanTokens.replace(" ","_")
+                newSentence = newSentence.replace(cleanTokens,multiToken)                
+            
+        return newSentence  
+    
+    def addMultiWords(self,listOfMultiWords):
+        
+        """
+            Updates the internal regex with a
+            list of multiwords
+        """
+        
+        buffer =  StringIO.StringIO()
+        
+        for multiWord in listOfMultiWords:
+            
+            if multiWord not in self.multiWordsRegex and multiWord not in buffer.getvalue(): 
+                buffer.write(self.regexTemplate.format(multiWord))
+            
+                #add a normalized (no accents) version
+                if multiWord != Utils.normalize(multiWord):
+                    buffer.write(self.regexTemplate.format(Utils.normalize(multiWord)))
+        
+        if len(self.multiWordsRegex) == 0:
+            self.multiWordsRegex = buffer.getvalue().strip('|')
+        else:
+            self.multiWordsRegex += "|" + buffer.getvalue().strip('|')
+      
+        buffer.close()
 
 class Rules:
 
@@ -259,22 +328,13 @@ class Rules:
    
     def __init__(self,persons,sentiTokens):
     
-        print "inside rules"
-        print "load persons"
-        self.persons = self.buildPersonsDict(persons)  
-        print "load sentiTokens"              
+        self.persons = self.buildPersonsDict(persons)                
         self.sentiTokens = sentiTokens
-        print "load quantRegex"
         self.quantRegex = self.getRegexFromList(self.QUANT)
-        print "load vcopRegex"
         self.vcopRegex = self.getRegexFromList(self.VCOP)
-        print "load nclasRegex"
         self.nclasRegex = self.getRegexFromList(self.NCLAS)
-        print "load vsupRegex"
         self.vsupRegex = self.getRegexFromList(self.VSUP)
-        print "load populateRegexes"
         self.populateSentiRegexes(sentiTokens)
-        print "done rules"
             
     def getRegexFromList(self,list):
         
@@ -453,7 +513,7 @@ class Rules:
     def inferPolarity(self,opinion,useTaggedSentence):
         
         for rule in self.setOfRules:
-            print rule
+
             result = rule(self,opinion,useTaggedSentence)
             
             if result != None:
@@ -461,16 +521,15 @@ class Rules:
                 info = opinion.metadata + ";" + result[1]
                 return opinion.clone(polarity=result[0],metadata=info)
         
-        print "End inferring by rules"     
         return opinion.clone(polarity=0)
 
-    def generateFeatureSet(self,opinion):
+    def generateFeatureSet(self,opinion,useTaggedSentence):
         
         featureSet = []
         
         for rule in self.setOfRules:
             
-            result = rule(self,opinion,False)
+            result = rule(self,opinion,useTaggedSentence)
             
             if result != None:
              
@@ -670,6 +729,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"um") == -1 or sentence.find(u"não") == -1:
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -693,6 +756,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"um") == -1 or sentence.find(u"não") == -1:
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -716,6 +783,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"um") == -1 or sentence.find(u"não") == -1:
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -739,6 +810,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"um") == -1 or sentence.find(u"não") == -1:
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -762,6 +837,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"um") == -1 or sentence.find(u"não") == -1:
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -785,6 +864,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"um") == -1 or sentence.find(u"não") == -1:
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -808,6 +891,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"não") == -1:
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -831,6 +918,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"não") == -1:
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -854,6 +945,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"não") == -1:
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -877,6 +972,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"não") == -1:
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -900,6 +999,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"um") == -1 and sentence.find(u"não") == -1:
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -923,6 +1026,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"falta") == -1:
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -946,6 +1053,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"um") == -1:
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -969,6 +1080,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"um") == -1:
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -992,6 +1107,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"um") == -1:
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -1015,6 +1134,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"um") == -1:
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -1038,6 +1161,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"um") == -1:
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -1061,6 +1188,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"um") == -1:
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -1084,6 +1215,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"um") == -1:
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -1107,6 +1242,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"um") == -1:
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -1130,6 +1269,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"um") == -1:
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -1247,6 +1390,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"do") == -1:
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -1270,6 +1417,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"falta de") == -1:
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -1293,6 +1444,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"falta de") == -1:
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -1316,6 +1471,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"um") == -1:
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -1340,6 +1499,10 @@ class Rules:
         else:
             sentence = opinion.sentence.lower()
          
+        if sentence.find(u"um") == -1:
+            
+            return None
+         
         match = re.search(regex,sentence)
         
         if match != None:
@@ -1362,6 +1525,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"não") == -1 and sentence.find(u"nunca") == -1: 
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -1385,6 +1552,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"não") == -1 and sentence.find(u"nunca") == -1: 
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -1410,6 +1581,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"não") == -1 and sentence.find(u"nunca") == -1: 
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -1434,6 +1609,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"não") == -1 and sentence.find(u"nunca") == -1: 
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -1458,6 +1637,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"não") == -1 and sentence.find(u"nunca") == -1: 
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -1482,6 +1665,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"não") == -1: 
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -1506,6 +1693,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"não") == -1: 
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -1578,6 +1769,10 @@ class Rules:
             sentence = opinion.taggedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"falta de") == -1: 
+            
+            return None
          
         match = re.search(regex,sentence)
         
@@ -1591,79 +1786,11 @@ class Rules:
             return None  
 
                 
-    setOfRules = setOfRules = [hasNickName,hasInterjectionWithTarget,hasInterjection,hasLol,hasHehe,hasHeavyPunctuation,
+    setOfRules = [hasNickName,hasInterjectionWithTarget,hasInterjection,hasLol,hasHehe,hasHeavyPunctuation,
                   hasSmiley,hasQuotedSentiment,rule27,rule4,rule3,rule2,rule1,rule12,rule11,rule14,rule5,rule13,rule16,rule15,
                   rule17,rule18,rule19,rule6,rule8,rule7,rule30,rule29,rule28,rule37,rule38,rule39,rule40,        
                   rule10,rule9,rule20,rule21,rule23,rule22,rule25,rule24,rule26,rule32,rule31,rule34,rule35,rule33, rule41]                    
     
-class MultiWordHandler:
-    
-    """
-        Handles the tokenization of multiwords from "x y" to "x_y"
-        Builds a regex that finds multiwords in a sentence 
-        Those multiwords are then concatenated with '_'
-    """
-    
-    regexTemplate = ur"(?:\W{0}(?:\W|$))|"
-    
-    def __init__(self,multiWordsFilePath):
-        
-        self.multiWordsRegex = ur""
-        
-        f = codecs.open(multiWordsFilePath,"r","utf-8")
-        multiWordsList = f.read().lower().split('\n')
-        
-        self.addMultiWords(multiWordsList)
-        
-    def tokenizeMultiWords(self,sentence):
-        
-        """
-            Finds multiwords in a sentence and
-            concatenates them with '_'
-        
-        """
-        
-        loweredSentence = sentence.lower()     
-        newSentence = loweredSentence
-        
-        matches = re.findall(self.multiWordsRegex,loweredSentence)        
-        
-        for multiWord in matches:
-                
-            cleanTokens = multiWord.strip(' ').rstrip(' ')
-            
-            if cleanTokens != "":
-            
-                multiToken = cleanTokens.replace(" ","_")
-                newSentence = newSentence.replace(cleanTokens,multiToken)                
-            
-        return newSentence  
-    
-    def addMultiWords(self,listOfMultiWords):
-        
-        """
-            Updates the internal regex with a
-            list of multiwords
-        """
-        
-        buffer =  StringIO.StringIO()
-        
-        for multiWord in listOfMultiWords:
-            
-            if multiWord not in self.multiWordsRegex and multiWord not in buffer.getvalue(): 
-                buffer.write(self.regexTemplate.format(multiWord))
-            
-                #add a normalized (no accents) version
-                if multiWord != Utils.normalize(multiWord):
-                    buffer.write(self.regexTemplate.format(Utils.normalize(multiWord)))
-        
-        if len(self.multiWordsRegex) == 0:
-            self.multiWordsRegex = buffer.getvalue().strip('|')
-        else:
-            self.multiWordsRegex += "|" + buffer.getvalue().strip('|')
-      
-        buffer.close()
-
 def testInterjectionTarget():
     
     sentenceNoMatch = u"O sócrates e passos coelho são bff"
