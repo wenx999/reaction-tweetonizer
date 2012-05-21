@@ -177,7 +177,7 @@ if __name__ == "__main__":
     #loadExceptionTokens("../Resources/SentiLexAccentExcpt.txt")
     f = codecs.open("res.txt","w","utf-8")
     
-    sentiTokens = loadSentiTokens("../Resources/sentiTokens-2011-05-30.txt","../Resources/SentiLexAccentExcpt.txt")
+    sentiTokens = loadSentiTokens("../Resources/SentiLex-flex-PT02.txt","../Resources/SentiLexAccentExcpt.txt")
         
     for a in sentiTokens:
         
