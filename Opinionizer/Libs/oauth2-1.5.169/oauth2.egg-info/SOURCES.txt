@@ -1,3 +1,4 @@
+PKG-INFO
 setup.cfg
 setup.py
 oauth2/__init__.py
