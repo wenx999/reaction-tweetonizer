@@ -1,6 +1,0 @@
-numOf-1:0
-numOf1:0
-numOf0:10
-correct-1:0
-correct0:5
-correct1:0

@@ -70,12 +70,7 @@ ARFF_HEADERS = """
 
 """
 
-#TWEETS = "/home/samir/TwitometroCorpus/teste.csv"
-#TWEETS = "/home/samir/corpusSoft.csv"
 TWEETS = "../SentiXXX.csv"
-#GOLD_STANDARD = "/home/samir/TwitometroCorpus/tweets_GoldStandard_teste.csv"
-#GOLD_STANDARD = "../twitometroGoldStandard.csv"
-#GOLD_STANDARD = "../SentiTuites-goldstandard-ALL-01.csv"
 GOLD_STANDARD = "../SentiTuites-goldstandard-2012.csv"
 SOURCE_PATH = "../Results/"
 DESTINY_PATH = "../Results/Features/"
@@ -173,10 +168,11 @@ def generateFeatures(isGoldStandard, sourceFile, destinyFile):
         
         i+=1
         
-        
+        """
         if i!=0 and i%20 == 0:
             
             break
+        """
         
     featuresFile.write(featurama.getvalue())
     featuresFile.close()
