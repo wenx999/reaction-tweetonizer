@@ -7,7 +7,7 @@ Created on Apr 8, 2011
 
 class Opinion:  
      
-    def __init__(self, id, sentence, target=u'', mention=u'', polarity=u'', irony=u'',metadata=u'',user=None,date=None,taggedSentence=None):        
+    def __init__(self, id, sentence, target=u'', mention=u'', polarity=u'', irony=u'',metadata=u'',user=None,date=None,processedSentence=None):        
         
         if sentence != None and type(sentence) != unicode: 
             raise Exception("\'sentence\' (" + sentence + ") must be in unicode! Not " + str(type(sentence)))
@@ -24,8 +24,8 @@ class Opinion:
         if user != None and type(user) != unicode: 
             raise Exception("\'user\' (" + user + " ) must be in unicode! Not " + str(type(user)))
         
-        if taggedSentence != None and type(taggedSentence) != unicode: 
-            raise Exception("\'taggedSentence\' (" + taggedSentence + " ) must be in unicode! Not " + str(type(taggedSentence)))
+        if processedSentence != None and type(processedSentence) != unicode: 
+            raise Exception("\'processedSentence\' (" + processedSentence + " ) must be in unicode! Not " + str(type(processedSentence)))
                         
         self.id = id
         self.target = target
@@ -37,12 +37,12 @@ class Opinion:
         self.date = date
         self.user = user
         
-        if taggedSentence == None:
-            self.taggedSentence = sentence
+        if processedSentence == None:
+            self.processedSentence = sentence
         else:
-            self.taggedSentence = taggedSentence
+            self.processedSentence = processedSentence
     
-    def clone(self, target=u'', mention=u'', polarity=u'', irony=u'',metadata=u'',user=None,date=None,taggedSentence = None):        
+    def clone(self, target=u'', mention=u'', polarity=u'', irony=u'',metadata=u'',user=None,date=None,processedSentence = None):        
         
         newTarget = self.target
         newMention = self.mention
@@ -51,7 +51,7 @@ class Opinion:
         newMetadata =  self.metadata
         newUser = self.user
         newDate = self.date
-        newTaggedSentence = self.taggedSentence
+        newProcessedSentence = self.processedSentence
                          
         if target != None and target != '':
             newTarget = target
@@ -74,15 +74,15 @@ class Opinion:
         if date != None and date != '':
             newDate = date
         
-        if taggedSentence != None and taggedSentence != '':
-            newTaggedSentence = taggedSentence
+        if processedSentence != None and processedSentence != '':
+            newProcessedSentence = processedSentence
         
-        return Opinion(self.id,self.sentence,newTarget,newMention,newPolarity,newIrony,newMetadata,newUser,newDate,newTaggedSentence) 
+        return Opinion(self.id,self.sentence,newTarget,newMention,newPolarity,newIrony,newMetadata,newUser,newDate,newProcessedSentence) 
         
             
     def tostring(self):
         
-        opinion = "id: " + str(self.id) + "\nsentence: " + self.sentence + "\ntagged sentence: " + self.taggedSentence         
+        opinion = "id: " + str(self.id) + "\nsentence: " + self.sentence + "\nprocessed sentence: " + self.processedSentence         
         
         if self.target != None:
             opinion += "\ntarget: " + self.target

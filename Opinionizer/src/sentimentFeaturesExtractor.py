@@ -7,6 +7,7 @@ import SentiTokens
 import os
 import glob
 import cStringIO
+import Preprocessor
 
 ARFF_HEADERS = """
 
@@ -75,7 +76,7 @@ TWEETS = "../SentiXXX.csv"
 #GOLD_STANDARD = "/home/samir/TwitometroCorpus/tweets_GoldStandard_teste.csv"
 #GOLD_STANDARD = "../twitometroGoldStandard.csv"
 #GOLD_STANDARD = "../SentiTuites-goldstandard-ALL-01.csv"
-GOLD_STANDARD = "../SentiTuites-goldstandard-Small-01-manual2.csv"
+GOLD_STANDARD = "../SentiTuites-goldstandard-2012.csv"
 SOURCE_PATH = "../Results/"
 DESTINY_PATH = "../Results/Features/"
 
@@ -87,113 +88,9 @@ TEXT = 6
 
 def generateFeatures(isGoldStandard, sourceFile, destinyFile):
     
-    corpus = csv.reader(codecs.open(sourceFile,"r","utf-8"),delimiter='|')
-    
-    listOfTweets = []
-    i=0
-    
-    for tweet in corpus:
-        
-        #skip the first line
-        if tweet[0] != 'DATE':
-        
-            o = Opinion(id = tweet[ID],
-                        sentence = unicode(tweet[TEXT]),
-                        target = unicode(tweet[TARGET]),
-                        mention = unicode(tweet[MENTION]),
-                        polarity = int(tweet[SENTIMENT_POLARITY]))
-            
-            listOfTweets.append(o)
-    
-    print "tweets loaded..."
-         
-    rulesClassifier = getRulesClassifier()
-    naiveClassifier = getNaiveClassifier()
-    
-    featuresFile = csv.writer(open(destinyFile,"w"),delimiter=',') 
-    
-    for t in listOfTweets:
-        
-        print t.id, " ("+str(i)+")"
-                
-        featureSet = rulesClassifier.generateFeatureSet(t)
-        featureSet.append(naiveClassifier.inferPolarity(t,False).polarity)
-        featureSet.insert(0, t.id)
-        
-        if isGoldStandard:
-                
-            featureSet.append(t.polarity)
-        
-        else:
-            featureSet.append("?")
-            
-        featuresFile.writerow(featureSet)
-        
-def generateFeatures2(isGoldStandard, sourceFile, destinyFile):
-    
-    corpus = csv.reader(codecs.open(sourceFile,"r","utf-8"),delimiter='|')
-    
-    listOfTweets = []
-    i=0
-    
-    for tweet in corpus:
-        
-        #skip the first line
-        if tweet[0] != 'PERIOD':
-            
-            print tweet
-            o = Opinion(id = tweet[ID],
-                        sentence = unicode(tweet[TEXT]),
-                        target = unicode(tweet[TARGET]),
-                        mention = unicode(tweet[MENTION]),
-                        polarity = int(tweet[SENTIMENT_POLARITY]))
-            
-            listOfTweets.append(o)
-    
-            i = i+1
-    
-    print "tweets loaded..."
-         
-    rulesClassifier = getRulesClassifier()
-    naiveClassifier = getNaiveClassifier()
-    
-    featuresFile = open(destinyFile,"w") 
-    featuresFile.write(ARFF_HEADERS)
-    
-    featurama = cStringIO.StringIO()
-    
-    for tweet in listOfTweets:
-        
-        print tweet.id
-        
-        featurama.write(str(tweet.id)+ ",")
-                
-        featureSet = rulesClassifier.generateFeatureSet(tweet)
-                
-        for feature in featureSet:
-            featurama.write(str(feature) + ",")
-               
-        naiveClassification = naiveClassifier.inferPolarity(tweet,False)
-        featurama.write(str(naiveClassification.polarity) + ",")
-                        
-        a = naiveClassification.metadata.find("score:")
-        score = naiveClassification.metadata[a+6:].replace(";","")
-        
-        featurama.write(str(score) + ",")        
-        
-        if isGoldStandard:
-                
-            featurama.write(str(tweet.polarity)+"\n")
-        
-        else:
-            featurama.write("?\n")
-        
-    featuresFile.write(featurama.getvalue())
-
-def generateFeatures3(isGoldStandard, sourceFile, destinyFile):
-    
-    corpus = csv.reader(codecs.open(sourceFile,"r","utf-8"),delimiter='|')
-    
+    #corpus = csv.reader(codecs.open(sourceFile,"r","utf-8"),delimiter='|')
+    corpus = codecs.open(sourceFile,"r","utf-8")
+     
     politicians = getPoliticians()
     sentiTokens = getSentiTokens()
     
@@ -204,7 +101,9 @@ def generateFeatures3(isGoldStandard, sourceFile, destinyFile):
     
     i=0
     
-    for tweet in corpus:
+    for line in corpus:
+        
+        tweet = line.replace("\"","\'").split('|')
         
         #skip the first line
         if tweet[0] != 'PERIOD':
@@ -216,10 +115,12 @@ def generateFeatures3(isGoldStandard, sourceFile, destinyFile):
                 sentence = sentence + block
                            
             tokenizedSentence = multiWordTokenizer.tokenizeMultiWords(sentence)
+            tokenizedSentence =  Preprocessor.removeURLs(tokenizedSentence)
+            tokenizedSentence = Preprocessor.removeUsernames(tokenizedSentence)
             
             o = Opinion(id = tweet[ID],
                         sentence = unicode(sentence),
-                        taggedSentence = unicode(tokenizedSentence),
+                        processedSentence = unicode(tokenizedSentence),
                         target = unicode(tweet[TARGET]),
                         mention = unicode(tweet[MENTION]),
                         polarity = int(tweet[SENTIMENT_POLARITY]))
@@ -230,13 +131,15 @@ def generateFeatures3(isGoldStandard, sourceFile, destinyFile):
         """          
         if i!=0 and i%20 == 0:
             
-            return
+            break
         """
         
     print "tweets loaded..."
     
     featuresFile = open(destinyFile,"w") 
     featuresFile.write(ARFF_HEADERS)
+    
+    #return 1
     
     featurama = cStringIO.StringIO()
     
@@ -270,38 +173,39 @@ def generateFeatures3(isGoldStandard, sourceFile, destinyFile):
         
         i+=1
         
-        """
+        
         if i!=0 and i%20 == 0:
             
             break
-        """
         
     featuresFile.write(featurama.getvalue())
+    featuresFile.close()
 
 def logTweets(listOfTweets,path):
     
     f = codecs.open(path,"w","utf-8")
     
     #Column headers
-    f.write("ID|USER|TARGET|MENTION|POLARITY|INFO|MESSAGE|TAGGED\n")
+    f.write("ID|USER|TARGET|MENTION|POLARITY|INFO|MESSAGE|PROCESSED\n")
     
     for tweet in listOfTweets:            
                         
-            target = tweet.target.replace("\n"," ")
-            mention = tweet.mention.replace("\n"," ")
-            metadata = tweet.metadata.replace("\n"," ")
-            sentence = tweet.sentence.replace("|","\\").replace("\n"," ").replace("\t"," ").replace("\r"," ")
-            taggedSentence = tweet.taggedSentence.replace("|","\\").replace("\n"," ").replace("\t"," ").replace("\r"," ")
+            target = tweet.target.replace("\n"," ").replace("\"","").replace("'","")
+            mention = tweet.mention.replace("\n"," ").replace("\"","").replace("'","")
+            metadata = tweet.metadata.replace("\n"," ").replace("'","")
+            sentence = tweet.sentence.replace("|","\\").replace("\n"," ").replace("\t"," ").replace("\r"," ").replace("'","")
+            processedSentence = tweet.processedSentence.replace("|","\\").replace("\n"," ").replace("\t"," ").replace("\r"," ").replace("'","")
             
-            f.write("\""+str(tweet.id) + "\"|" + tweet.user + "|\"" + target  + "\"|\"" + mention + "\"|" + str(tweet.polarity ) + "|\"" + metadata +  "\"|\"" + sentence + "\"|\"" + taggedSentence + "\"\n")
+            f.write("\""+str(tweet.id) + "\"|" + tweet.user + "|\"" + target  + "\"|\"" + mention + "\"|" + str(tweet.polarity ) + "|\"" + metadata +  "\"|\"" + sentence + "\"|\"" + processedSentence + "\"\n")
     
     f.close()
 
-def testOldProcess(sourceFile):
+def testOldProcessWithDiagnostics(sourceFile):
     
     results = {"numOf-1":0,"correct-1":0,"numOf0":0,"correct0":0,"numOf1":0,"correct1":0}
     
-    corpus = csv.reader(codecs.open(sourceFile,"r","utf-8"),delimiter='|')
+    #corpus = csv.reader(codecs.open(sourceFile,"r","utf-8"),delimiter='|')
+    corpus = codecs.open(sourceFile,"r","utf-8")
     
     listOfTweets = []
     i=0
@@ -313,24 +217,31 @@ def testOldProcess(sourceFile):
     naiveClassifier = Opinionizers.Naive(politicians,sentiTokens)    
     multiWordTokenizer = getMultiWordsTokenizer(politicians, sentiTokens)
     
-    for tweet in corpus:
+    print "loading tweets..."
+    
+    for line in corpus:
+        
+        tweet = line.replace("\"","\'").split('|')
         
         #skip the first line
         if tweet[0] != 'PERIOD':
             
-            print tweet
+            #print tweet
             
             fullSentence = ''
             
+            #in some cases the message spawns across several fields so we are concatenating them...
             for block in tweet[TEXT:]:
                 fullSentence = fullSentence + block
                 
-            tokenizedSentence = multiWordTokenizer.tokenizeMultiWords(fullSentence)
+            tokenizedSentence = multiWordTokenizer.tokenizeMultiWords(unicode(fullSentence))
+            tokenizedSentence =  Preprocessor.removeURLs(tokenizedSentence)
+            tokenizedSentence = Preprocessor.removeUsernames(tokenizedSentence)            
             
             o = Opinion(id = tweet[ID],
                         user = u"Teste",
                         sentence = unicode(fullSentence),
-                        taggedSentence = unicode(tokenizedSentence),
+                        processedSentence = unicode(tokenizedSentence),
                         target = unicode(tweet[TARGET]),
                         mention = unicode(tweet[MENTION]),
                         polarity = int(tweet[SENTIMENT_POLARITY]))
@@ -339,11 +250,11 @@ def testOldProcess(sourceFile):
     
             i = i+1
             
-            """
+            
             if i!=0 and i%10 == 0:
                 
                 break
-            """
+            
             
     print "tweets loaded..."
     
@@ -367,6 +278,8 @@ def testOldProcess(sourceFile):
             if tweet.polarity == classifiedTweet.polarity:
                 results["correct-1"] +=1
             else:
+                matchedRules = rulesDiagnosticHelper(rulesClassifier.generateFeatureSet(tweet,True))
+                classifiedTweet.metadata += " " + matchedRules
                 falseNeg.append(classifiedTweet)
                 
         elif tweet.polarity == 0:
@@ -374,6 +287,8 @@ def testOldProcess(sourceFile):
             if tweet.polarity == classifiedTweet.polarity:
                 results["correct0"] +=1
             else:            
+                matchedRules = rulesDiagnosticHelper(rulesClassifier.generateFeatureSet(tweet,True))
+                classifiedTweet.metadata += " " + matchedRules
                 falseNeut.append(classifiedTweet)
                 
         if tweet.polarity == 1:
@@ -381,14 +296,42 @@ def testOldProcess(sourceFile):
             if tweet.polarity == classifiedTweet.polarity:
                 results["correct1"] +=1
             else:
+                matchedRules = rulesDiagnosticHelper(rulesClassifier.generateFeatureSet(tweet,True))
+                classifiedTweet.metadata += " " + matchedRules
                 falsePos.append(classifiedTweet)
     
     logTweets(falseNeg,"./falseNegs.csv")
     logTweets(falseNeut,"./falseNeut.csv")
     logTweets(falsePos,"./falsePos.csv")
     logTweets(totalList,"./totalList.csv")
-                    
+    
+    g = open("results.txt","w")
+    
+    for k,v in results.items():
+        
+        g.write(k+":"+str(v)+"\n")
+    
+    g.close()                
     print results
+
+def rulesDiagnosticHelper(rulesVector):
+    
+    setOfRules = ["hasNickName","hasInterjectionWithTarget","hasInterjection","hasLol","hasHehe","hasHeavyPunctuation",
+    "hasSmiley","hasQuotedSentiment","rule27","rule4","rule3","rule2","rule1","rule12","rule11","rule14","rule5","rule13","rule16","rule15",
+    "rule17","rule18","rule19","rule6","rule8","rule7","rule30","rule29","rule28","rule37","rule38","rule39","rule40",        
+    "rule10","rule9","rule20","rule21","rule23","rule22","rule25","rule24","rule26","rule32","rule31","rule34","rule35","rule33", "rule41"]
+     
+    v = 0
+    matchedRules = ';rules='
+     
+    while v < len(rulesVector):
+        
+        if rulesVector[v] != 0:
+            matchedRules = matchedRules + "," + setOfRules[v]
+            
+        v += 1
+    
+    return matchedRules
     
 def getPoliticians():
     
@@ -399,7 +342,7 @@ def getPoliticians():
 
 def getSentiTokens():
     
-    sentiTokensFile = "../Resources/sentiTokens-2011-05-30.txt"
+    sentiTokensFile = "../Resources/SentiLex-flex-PT02.txt"
     exceptTokensFile = "../Resources/SentiLexAccentExcpt.txt"
     
     sentiTokens = SentiTokens.loadSentiTokens(sentiTokensFile,exceptTokensFile)
@@ -412,19 +355,18 @@ def getRulesClassifier(politicians, sentiTokens):
 
 def getNaiveClassifier(politicians, sentiTokens):
 
-    politiciansFile = "../Resources/politicians.txt"
-    sentiTokensFile = "../Resources/sentiTokens-2011-05-30.txt"
-    exceptTokensFile = "../Resources/SentiLexAccentExcpt.txt"
+    #politiciansFile = "../Resources/politicians.txt"
+    #sentiTokensFile = "../Resources/SentiLex-flex-PT02.txt"
+    #exceptTokensFile = "../Resources/SentiLexAccentExcpt.txt"
     
-    politicians = Persons.loadPoliticians(politiciansFile)
-    sentiTokens = SentiTokens.loadSentiTokens(sentiTokensFile,exceptTokensFile)
+    #politicians = Persons.loadPoliticians(politiciansFile)
+    #sentiTokens = SentiTokens.loadSentiTokens(sentiTokensFile,exceptTokensFile)
     
     return Opinionizers.Naive(politicians,sentiTokens)    
 
 def getMultiWordsTokenizer(politicians,sentiTokens):
     
-    multiWordsFile = "../Resources/multiwords.txt"
-    print "Multiword Tokenizer " + multiWordsFile    
+    multiWordsFile = "../Resources/multiwords.txt"    
     
     multiWordTokenizer = Opinionizers.MultiWordHandler(multiWordsFile)
     multiWordTokenizer.addMultiWords(Persons.getMultiWords(politicians))
@@ -447,9 +389,7 @@ if __name__ == '__main__':
     print "GO"
     
     #processFiles()
-    #generateFeatures(True,GOLD_STANDARD,"tweets_gold.csv")
-    #generateFeatures(False,TWEETS,"tweets_corpusfeatures.csv")
-    #generateFeatures3(True,GOLD_STANDARD,"tweetsFeatureVectors.arff")
-    testOldProcess(GOLD_STANDARD)
+    generateFeatures(True,GOLD_STANDARD,"./tweetsFeatureVectors.arff")
+    #testOldProcessWithDiagnostics(GOLD_STANDARD)
     
     print "Done!"

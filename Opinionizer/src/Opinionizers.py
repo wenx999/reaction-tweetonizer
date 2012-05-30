@@ -162,7 +162,7 @@ class Naive:
         specialChars = u' “”\"@)(!#;&:\\@/-_,?.«»\' ' 
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
             
@@ -564,7 +564,7 @@ class Rules:
         regex = r'(\W|^)(l+o+l+(o+)?)+(\W|$)'
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -584,7 +584,7 @@ class Rules:
         regex = r'(\W|^)([\W ])[:;xX8]-?([\)\(psd])+.?'
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -604,7 +604,7 @@ class Rules:
         regex = r'(\W|^)(h[e|a|i]+){2,}|(h[e|a|i] ?){2,}|([a|e]h ?){2,}(\W|$)'
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -625,7 +625,7 @@ class Rules:
         regex = ur'(\W|^)\".*({0}|{1}).*\"(\W|$)'.format(self.adjsPosRegex,self.nounsPosRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -646,7 +646,7 @@ class Rules:
         regex = r'(\W|^)([!?]{2,})+.?'
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -667,7 +667,7 @@ class Rules:
         regex = ur'(\W|^)(m+e+r+d+a+|f+o+d+a+-*s+e*|(es)?t[áa] fdd|que no+jo+|cre+do+|li+ndo+|(oh)?meu deus|u+i+|li+vra+|a+ba+i+xo+!|fo+ra+!|ru+a+!|safa!|cruzes!|passou-se!|basta!|fo+go+!|estamos feitos)!*(\W|$)'        
                
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -690,7 +690,7 @@ class Rules:
         regexTargetRight = ur'(\W|^)(oh|obrigado|senhor|anti-|este|esse){0}(\W|$)'.format(target)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
     
@@ -726,7 +726,7 @@ class Rules:
         regex = ur'(\W|^)não ({0}) (um|uma) ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.nclasRegex,self.adjsPosRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -753,7 +753,7 @@ class Rules:
         regex = ur'(\W|^)não ({0}) (um|uma) ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.nclasRegex,self.adjsNegRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -780,7 +780,7 @@ class Rules:
         regex = ur'(\W|^)não ({0}) (um|uma) ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.adjsPosRegex,self.nclasRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -807,7 +807,7 @@ class Rules:
         regex = ur'(\W|^)não ({0}) (um|uma) ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.adjsNegRegex,self.nclasRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -834,7 +834,7 @@ class Rules:
         regex = ur'(\W|^)não ({0}) (um|uma) ({1})(\W|$)'.format(self.vcopRegex,self.adjsNegRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -861,7 +861,7 @@ class Rules:
         regex = ur'(\W|^)não ({0}) (um|uma) ({1})(\W|$)'.format(self.vcopRegex,self.nounsNegRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -888,7 +888,7 @@ class Rules:
         regex = ur'(\W|^)não ({0}) ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.quantRegex,self.adjsPosRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -915,7 +915,7 @@ class Rules:
         regex = ur'(\W|^)não ({0}) ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.quantRegex,self.adjsNegRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -942,7 +942,7 @@ class Rules:
         regex = ur'(\W|^)não ({0}) ({1})(\W|$)'.format(self.vcopRegex,self.adjsPosRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -969,7 +969,7 @@ class Rules:
         regex = ur'(\W|^)não ({0}) ({1})(\W|$)'.format(self.vcopRegex,self.adjsNegRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -996,7 +996,7 @@ class Rules:
         regex = ur'(\W|^)não ({0}) (um|uma) ({1}|{2}) ({3})(\W|$)'.format(self.vsupRegex,self.adjsPosRegex,self.adjsNeutRegex,self.nounsPosRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -1023,7 +1023,7 @@ class Rules:
         regex = ur'(\W|^)não ({0}) falta de ({1})(\W|$)'.format(self.vsupRegex,self.nounsPosRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -1050,7 +1050,7 @@ class Rules:
         regex = ur'(\W|^)({0}) um ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.nclasRegex,self.adjsNegRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -1077,7 +1077,7 @@ class Rules:
         regex = ur'(\W|^)({0}) um ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.nclasRegex,self.adjsPosRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -1104,7 +1104,7 @@ class Rules:
         regex = ur'(\W|^)({0}) um ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.adjsNegRegex,self.nclasRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -1131,7 +1131,7 @@ class Rules:
         regex = ur'(\W|^)({0}) um ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.adjsPosRegex,self.nclasRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -1158,7 +1158,7 @@ class Rules:
         regex = ur'(\W|^)({0}) um ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.adjsPosRegex,self.adjsNegRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -1185,7 +1185,7 @@ class Rules:
         regex = ur'(\W|^)({0}) um ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.adjsPosRegex,self.nounsNegRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -1212,7 +1212,7 @@ class Rules:
         regex = ur'(\W|^)({0}) um ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.adjsNegRegex,self.adjsNegRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -1239,7 +1239,7 @@ class Rules:
         regex = ur'(\W|^)({0}) um ({1})(\W|$)'.format(self.vcopRegex,self.adjsNegRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -1266,7 +1266,7 @@ class Rules:
         regex = ur'(\W|^)({0}) um ({1})(\W|$)'.format(self.vcopRegex,self.nounsNegRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -1293,7 +1293,7 @@ class Rules:
         regex = ur'(\W|^)({0}) ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.quantRegex,self.adjsNegRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
          
@@ -1316,7 +1316,7 @@ class Rules:
         regex = ur'(\W|^)({0}) ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.quantRegex,self.adjsPosRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
          
@@ -1339,7 +1339,7 @@ class Rules:
         regex = ur'(\W|^)({0}) ({1})(\W|$)'.format(self.vcopRegex,self.adjsNegRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
          
@@ -1362,7 +1362,7 @@ class Rules:
         regex = ur'(\W|^)({0}) ({1})(\W|$)'.format(self.vcopRegex,self.adjsPosRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
          
@@ -1387,7 +1387,7 @@ class Rules:
         regex = ur'(\W|^)o ({0}) do {1}(\W|$)'.format(self.adjsNegRegex,target)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -1414,7 +1414,7 @@ class Rules:
         regex = ur'(\W|^)({0}) (um|uma) ({1}|{2}) falta de ({3})(\W|$)'.format(self.vsupRegex,self.adjsPosRegex,self.adjsNeutRegex,self.nounsPosRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -1441,7 +1441,7 @@ class Rules:
         regex = ur'(\W|^)({0}) falta de ({1})(\W|$)'.format(self.vsupRegex,self.nounsPosRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -1468,7 +1468,7 @@ class Rules:
         regex = ur'(\W|^)({0}) (um|uma) ({1}|{2}) ({3})(\W|$)'.format(self.vsupRegex,self.adjsPosRegex,self.adjsNeutRegex,self.nounsNegRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -1495,7 +1495,7 @@ class Rules:
         regex = ur'(\W|^)({0}) (um|uma) ({1}|{2}) ({3})(\W|$)'.format(self.vsupRegex,self.adjsPosRegex,self.adjsNeutRegex,self.nounsPosRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
          
@@ -1522,7 +1522,7 @@ class Rules:
         regex = ur'(\W|^)(não|nunca) ({0}|{1})(\W|$)'.format(self.idiomNegRegex,self.verbNegRegex)
     
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -1549,7 +1549,7 @@ class Rules:
         regex = ur'(\W|^)(não|nunca) ({0}) a ({1})(\W|$)'.format(self.vcopRegex,self.verbNegRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -1578,7 +1578,7 @@ class Rules:
         regex = ur'(\W|^)(não|nunca) ({0}|{1})(\W|$)'.format(self.verbPosRegex,self.idiomPosRegex)
               
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -1606,7 +1606,7 @@ class Rules:
         regex = ur'(\W|^)(não|nunca) se ({0}|{1})(\W|$)'.format(self.verbNegRegex,self.idiomNegRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -1634,7 +1634,7 @@ class Rules:
         regex = ur'(\W|^)(não|nunca) se ({0}|{1})(\W|$)'.format(self.verbPosRegex,self.idiomPosRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -1662,7 +1662,7 @@ class Rules:
         regex = ur'(\W|^)não ({0}) (({1}) )?({2})(\W|$)'.format(self.vsupRegex,self.quantRegex,self.nounsNegRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -1690,7 +1690,7 @@ class Rules:
         regex = ur'(\W|^)não ({0}) (({1}) )?({2})(\W|$)'.format(self.vsupRegex,self.quantRegex,self.nounsPosRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -1718,7 +1718,7 @@ class Rules:
         regex = ur'(\W|^)({0}) (({1}) )?({2})(\W|$)'.format(self.vsupRegex,self.quantRegex,self.nounsPosRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
          
@@ -1742,7 +1742,7 @@ class Rules:
         regex = ur'(\W|^)({0}) (({1}) )?({2})(\W|$)'.format(self.vsupRegex,self.quantRegex,self.nounsNegRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
          
@@ -1766,7 +1766,7 @@ class Rules:
         regex = ur'(\W|^)falta de ({0})(\W|$)'.format(self.nounsPosRegex)
         
         if useTaggedSentence:
-            sentence = opinion.taggedSentence.lower()
+            sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
@@ -2139,8 +2139,8 @@ def testSintaticRules():
     for sentence in s41:
     
         o = Opinion(1,sentence,u"socrates",u"sócrates",0,None,u"Manual",u"Manual",None)
-        #o.taggedSentence = mw.tokenizeMultiWords(sentence)
-        #print "tagged: ", o.taggedSentence
+        #o.processedSentence = mw.tokenizeMultiWords(sentence)
+        #print "tagged: ", o.processedSentence
         #v = ruler.rule33(o,False)
         v = ruler.rule41(o,True)
         

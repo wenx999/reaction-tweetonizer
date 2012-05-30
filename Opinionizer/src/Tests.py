@@ -15,6 +15,14 @@ import contextRestrictions
 import MySQLdb
 import codecs
 import subprocess 
+import sys
+import urllib
+import simplejson
+from datetime import datetime,timedelta
+import Opinionizers
+import Preprocessor
+import Persons
+import SentiTokens
 
 def testSubprocess():    
     
@@ -229,11 +237,140 @@ def testConcordance():
     l = getConcordance(text,"rato",2)
     
     print l
-            
+
+def newGetTweets(beginDate,endDate,proxy):
+    
+    """
+    Gets tweets from a service for a certain period
+    Params: begin date 
+    end date
+    proxy
+    
+    Returns: list of Opinion instances
+    """
+    
+    print "Getting new tweets..."
+    
+    username = "twitter_crawl_user"
+    password = "twitter_crawl_pass"
+    top_level_url = "http://pattie.fe.up.pt/solr/portugal/select"
+    requestTweets = "http://pattie.fe.up.pt/solr/portugal/select?q=created_at:[{0}%20TO%20{1}]&indent=on&wt=json"
+    #requestTweets = "http://pattie.fe.up.pt/solr/portugal/select?q=created_at:[2012-05-25T13:00:00Z%20TO%202012-05-25T15:00:00Z]&indent=on&wt=json"
+    
+    #Password manager because the service requires authentication
+    password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
+    password_mgr.add_password(None, top_level_url, username, password)
+    auth_handler = urllib2.HTTPBasicAuthHandler(password_mgr)
+    opener = None
+    
+  
+    
+    if proxy != None:
+        proxy_handler = urllib2.ProxyHandler({'http': proxy})        
+        opener = urllib2.build_opener(auth_handler,proxy_handler)       
+    else:
+        #opener = urllib2.build_opener(auth_handler)
+        opener = urllib2.build_opener()
+    
+    if beginDate.strftime('%Y') == "1900":
+       
+        print "Getting Tweets from STDIN ..."
+        twitterData = sys.stdin;
+        
+    else:
+        """
+        print "Requesting: " + requestTweets.format(beginDate.strftime('%Y-%m-%dT%H:%M:%Sz'),
+                                                    endDate.strftime('%Y-%m-%dT%H:%M:%Sz'))
+        twitterData = opener.open(requestTweets.format(beginDate.strftime('%Y-%m-%dT%H:%M:%Sz'),
+                                                       endDate.strftime('%Y-%m-%dT%H:%M:%Sz')));
+                                                       
+        """
+        
+        print "Requesting: " + requestTweets.format(urllib.quote(beginDate.strftime('%Y-%m-%dT%H:%M:%SZ')),
+                                                    urllib.quote(endDate.strftime('%Y-%m-%dT%H:%M:%SZ')))
+        twitterData = opener.open(requestTweets.format(urllib.quote(beginDate.strftime('%Y-%m-%dT%H:%M:%SZ')),
+                                                       urllib.quote(endDate.strftime('%Y-%m-%dT%H:%M:%SZ'))));
+        
+    #Read the JSON response
+    jsonTwitter = simplejson.loads(unicode(twitterData.read().decode("utf-8")))
+    
+    print jsonTwitter["response"]
+    
+    politicians = getPoliticians()
+    sentiTokens = getSentiTokens()
+       
+    multiWordTokenizer = getMultiWordsTokenizer(politicians, sentiTokens)
+                                
+    listOfTweets = []
+    
+    #Build a dictionary
+    for tweet in jsonTwitter["response"]["docs"]:
+    
+        id = str(tweet["user_id"]) + "_" + str(tweet["id"])
+        userId = unicode(tweet["user_id"])
+        #print userId
+        
+        date =  datetime.strptime(tweet["created_at"], '%Y-%m-%dT%H:%M:%Sz')
+        
+        taggedSentence = multiWordTokenizer.tokenizeMultiWords(unicode(tweet["text"]))
+        taggedSentence = Preprocessor.removeURLs(taggedSentence)
+        taggedSentence = Preprocessor.removeUsernames(taggedSentence)  
+        
+        listOfTweets.append(Opinionizers.Opinion(tweet["id"],unicode(tweet["text"]),user=userId,date=date,processedSentence = taggedSentence))
+    
+    print len(listOfTweets), " tweets loaded\n"  
+   
+    return listOfTweets
+
+def getPoliticians():
+    
+    politiciansFile = "../Resources/politicians.txt"
+    politicians = Persons.loadPoliticians(politiciansFile)
+    
+    return politicians
+
+def getSentiTokens():
+    
+    sentiTokensFile = "../Resources/sentiTokens-2011-05-30.txt"
+    exceptTokensFile = "../Resources/SentiLexAccentExcpt.txt"
+    
+    sentiTokens = SentiTokens.loadSentiTokens(sentiTokensFile,exceptTokensFile)
+    
+    return sentiTokens
+
+def getRulesClassifier(politicians, sentiTokens):
+    
+    return Opinionizers.Rules(politicians,sentiTokens)    
+
+def getNaiveClassifier(politicians, sentiTokens):
+
+    politiciansFile = "../Resources/politicians.txt"
+    sentiTokensFile = "../Resources/sentiTokens-2011-05-30.txt"
+    exceptTokensFile = "../Resources/SentiLexAccentExcpt.txt"
+    
+    politicians = Persons.loadPoliticians(politiciansFile)
+    sentiTokens = SentiTokens.loadSentiTokens(sentiTokensFile,exceptTokensFile)
+    
+    return Opinionizers.Naive(politicians,sentiTokens)    
+
+def getMultiWordsTokenizer(politicians,sentiTokens):
+    
+    multiWordsFile = "../Resources/multiwords.txt"
+    print "Multiword Tokenizer " + multiWordsFile    
+    
+    multiWordTokenizer = Opinionizers.MultiWordHandler(multiWordsFile)
+    multiWordTokenizer.addMultiWords(Persons.getMultiWords(politicians))
+    multiWordTokenizer.addMultiWords(SentiTokens.getMultiWords(sentiTokens))
+
+    return multiWordTokenizer
+    
 if __name__ == '__main__':
     
     print "GOOO!"
+    #
+    a = newGetTweets(datetime(year=2011,month=1,day=1),datetime.now(),None)
     
-    testConcordance()
+    for b in a:
+        print b.tostring() + "\n\n"
     
     print "Done!"

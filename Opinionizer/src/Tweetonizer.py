@@ -16,7 +16,6 @@ import urllib
 import simplejson
 from Opinion import Opinion
 import codecs
-import twitter
 import os
 import sys
 import Utils
@@ -103,8 +102,41 @@ def logHourlyTweets(listOfTweets,logFolder,next,prev):
     f.close()
 
 def postResults(stats,proxy,date):
+        
+    """ Posts the statistics via a webservice 
+        
+        Params: stats -> list of tuples(target,nTweets,nPositives,nNeutrals,nNegatives)
+                proxy -> proxy url 
+                date  -> results of date
+    """
+    print "\nPosting daily stats...\n"
     
-        print "1"
+    username = "ome_user"
+    password = "ome_pass"
+    topLevelUrl = "http://robinson.fe.up.pt/cgi-bin/OpinionMiningElections/post_daily_results.pl"
+    postResultsUrl =  "http://robinson.fe.up.pt/cgi-bin/OpinionMiningElections/post_daily_results.pl?target={0}&source=twitter&pos={1}&neg={2}&neu={3}&version=baseline&date={4}"   
+    
+    password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
+    password_mgr.add_password(None, topLevelUrl, username, password)
+    authHandler = urllib2.HTTPBasicAuthHandler(password_mgr)
+    
+    opener = None
+    
+    if proxy != None:
+        proxyHandler = urllib2.ProxyHandler({'http': proxy})        
+        opener = urllib2.build_opener(proxyHandler,authHandler)
+    else:
+        opener = urllib2.build_opener(authHandler)
+    
+    for target in stats:
+        
+        normalizedTargetName = urllib.quote(Utils.normalize(unicode(target[TARGET])))
+        normalizedDate =  urllib.quote(date.strftime('%Y-%m-%d'))
+        print "posting results to: " + postResultsUrl.format(normalizedTargetName,target[POSITIVES],target[NEGATIVES],target[NEUTRALS],normalizedDate)
+        response = opener.open(postResultsUrl.format(normalizedTargetName,target[POSITIVES],target[NEGATIVES],target[NEUTRALS],normalizedDate))
+        time.sleep(5)
+        
+        print response.readlines()
 
 def getStats(tweetsByTarget):
     
@@ -209,9 +241,43 @@ def printMessages(messages):
     
         print message
  
-def tweetResults(tweets,acessKey,acessSecrect,randomizeTweets,proxy):    
+def tweetResults(tweets,acessKey,acessSecrect,randomizeTweets,proxy):       
+    
+    """
+        Tweets the results in a twitter account
+        
+        Params: tweets -> list of tweet messages                
+                accessKey -> for oAuth authentication
+                accessSecret -> for oAuth authentication
+                randomizeTweets -> True if tweets need to have a random substring to avoid posting duplicates
+                proxy 
+    """
+    
+    print "Posting results to twitter...\n"
+    
+    consumer_key = "sEwbkfgkFU4B7l5DBuRvXw"
+    consumer_secret = "aUAKFq3qpB7NqeHh89AIJL85ZXHORlmZ7WIczLoxE"    
+    
+      
+    if proxy != None:
+        os.environ['HTTP_PROXY'] = proxy        
+        proxy_handler = urllib2.ProxyHandler({'http': proxy})    
+        opener = urllib2.build_opener(proxy_handler)
+        urllib2.install_opener(opener)    
+    
 
-    print "1"
+    api = twitter.Api(consumer_key=consumer_key,
+                       consumer_secret=consumer_secret, access_token_key=acessKey, access_token_secret=acessSecrect)
+    
+    for tweetMessage in tweets:
+        
+        if randomizeTweets:            
+            randomizedTweet = tweetMessage +  " <" + str(random.random())[3:7] + ">"
+            print randomizedTweet, " ("+str(len(randomizedTweet))+")"
+            api.PostUpdate(randomizedTweet)   
+        else:
+            print tweetMessage, " ("+str(len(tweetMessage))+")"
+            api.PostUpdate(tweetMessage) 
 
     
 def formatStats(stats,nTweets,beginDate,endDate):
