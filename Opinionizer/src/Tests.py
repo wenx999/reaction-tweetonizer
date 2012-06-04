@@ -363,14 +363,74 @@ def getMultiWordsTokenizer(politicians,sentiTokens):
     multiWordTokenizer.addMultiWords(SentiTokens.getMultiWords(sentiTokens))
 
     return multiWordTokenizer
+
+def isNewsSource(sentence):
+    
+    newsSourceList = "jn|diarionoticias|publico|público|expresso|antena 1|destak|destakes|dn|economico|iportugal|iradar|portugal diario|sol|tsf|ultimas|noticiasrtp|rtp|tvi|sic|sicn|diárioeconómico|ionline|sábado|sabado|visao|visão|lusa_noticias|expressoonline"
+        
+    info = u'Regra \"news source!\""-> '        
+    regex = ur'(\W|^)#({0})|@({0})|\(({0})\)|\[({0})\](\W|$)'.format(newsSourceList)
+    
+    """
+    if useTaggedSentence:
+        sentence = opinion.processedSentence.lower()
+    else:
+        sentence = opinion.sentence.lower()
+    
+    
+    if sentence.find(u"falta de") == -1:
+        
+        return None
+    """
+     
+    match = re.search(regex,sentence)
+    
+    if match != None:
+        
+        info += match.group() 
+        
+        return (1,info) 
+        
+    else:
+        return None
+
+def a():
+    
+    for c in map(chr, range(256)):
+         
+        if not c.isalnum():
+            print c
+
+
+def separateSpecialSymbols(sentence):
+    
+    symbols = [",","!",":",";",".","-","_","+","*","@","£","#","$","\"","%","&","(",")","/","<",">","[","]","^","{","}","|","'","~","?"]
+    
+    newSentence = sentence
+    
+    for s in symbols:
+        newSentence = newSentence.replace(s," "+s+" ")
+        
+    return newSentence
     
 if __name__ == '__main__':
     
     print "GOOO!"
-    #
+    
+    print separateSpecialSymbols("*(ola~silvio!!!!! (aetolas?")
+    
+    
+    """
+    print isNewsSource("aquelas manbos ")
+    print isNewsSource("aquelas manbos #publico coiso")
+    print isNewsSource("aquelas manbos @jn cenas")
+    print isNewsSource("(diarionoticias) aquelas manbos cenas")
+    print isNewsSource(" [publico] aquelas manbos cenas")
+    
+    
     a = newGetTweets(datetime(year=2011,month=1,day=1),datetime.now(),None)
     
     for b in a:
         print b.tostring() + "\n\n"
-    
+    """
     print "Done!"

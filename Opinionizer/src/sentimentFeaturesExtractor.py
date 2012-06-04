@@ -1,3 +1,5 @@
+# -*- coding: UTF-8 -*-
+
 import Opinionizers
 from Opinion import Opinion
 import csv
@@ -7,7 +9,9 @@ import SentiTokens
 import os
 import glob
 import cStringIO
+import re
 import Preprocessor
+import pickle
 
 ARFF_HEADERS = """
 
@@ -64,6 +68,7 @@ ARFF_HEADERS = """
 @ATTRIBUTE rule41  NUMERIC
 @ATTRIBUTE naiveClassification {-1,0,1}
 @ATTRIBUTE naiveSentiScore NUMERIC 
+@ATTRIBUTE isNewsSource {0,1}
 @ATTRIBUTE polarity? {-1,0,1}
 
 @data
@@ -72,6 +77,7 @@ ARFF_HEADERS = """
 
 TWEETS = "../SentiXXX.csv"
 GOLD_STANDARD = "../SentiTuites-goldstandard-2012.csv"
+GOLD_STANDARD_TEST = "../SentiTuites-goldstandard-2012-test.csv"
 SOURCE_PATH = "../Results/"
 DESTINY_PATH = "../Results/Features/"
 
@@ -133,49 +139,101 @@ def generateFeatures(isGoldStandard, sourceFile, destinyFile):
     
     featuresFile = open(destinyFile,"w") 
     featuresFile.write(ARFF_HEADERS)
-    
-    #return 1
-    
+    unknownSentiFile = open("./unknownSentiment.txt","w")
+        
     featurama = cStringIO.StringIO()
+    unknownSentiment = cStringIO.StringIO()
     
-    i=0
+    
+    i = 0
+    
+    tmp = cStringIO.StringIO()
     
     for tweet in listOfTweets:
         
         print tweet.id
         
-        featurama.write(str(tweet.id)+ ",")
-                
+        #used to verify if an instance matches any rule and\or has any sentiToken
+        #if after processing this var still has value 0 then we don't add it to 
+        #the training set...
+        sentiCounter = 0
+        
+        tmp = cStringIO.StringIO()
+        #featurama.write(str(tweet.id)+ ",")
+        tmp.write(str(tweet.id)+ ",")
+                 
         featureSet = rulesClassifier.generateFeatureSet(tweet,True)
                 
         for feature in featureSet:
-            featurama.write(str(feature) + ",")
+            #featurama.write(str(feature) + ",")
+            tmp.write(str(feature) + ",")
+            sentiCounter += feature
                
         naiveClassification = naiveClassifier.inferPolarity(tweet,True)
-        featurama.write(str(naiveClassification.polarity) + ",")
+        #featurama.write(str(naiveClassification.polarity) + ",")
+        tmp.write(str(naiveClassification.polarity) + ",")
+        sentiCounter+= naiveClassification.polarity
                         
         pos = naiveClassification.metadata.find("score:")
         score = naiveClassification.metadata[pos+6:].replace(";","")
+        #featurama.write(str(score) + ",")
+        tmp.write(str(score) + ",")        
+        sentiCounter+= int(score)
         
-        featurama.write(str(score) + ",")        
+        isNews = isNewsSource(tweet.sentence)
+        #featurama.write(str(isNews) + ",")
+        tmp.write(str(isNews) + ",")
+        sentiCounter+= isNews
         
-        if isGoldStandard:
-                
-            featurama.write(str(tweet.polarity)+"\n")
-        
-        else:
-            featurama.write("?\n")
-        
-        i+=1
-        
-        """
-        if i!=0 and i%20 == 0:
+        if sentiCounter != 0:
+            if isGoldStandard:
+                    
+                featurama.write(tmp.getvalue()+str(tweet.polarity)+"\n")
             
-            break
-        """
+            else:
+                featurama.write(tmp.getvalue()+"?\n")
+        
+            i+=1
+        else:
+            unknownSentiment.write(tweet.id+"\n")
+            
         
     featuresFile.write(featurama.getvalue())
     featuresFile.close()
+    unknownSentiFile.write(unknownSentiment.getvalue())
+    unknownSentiFile.close()
+
+def isNewsSource(sentence):
+    
+    newsSourceList = "jn|diarionoticias|publico|público|expresso|antena 1|destak|destakes|dn|economico|iportugal|iradar|portugal diario|sol|tsf|ultimas|noticiasrtp|rtp|tvi|sic|sicn|diárioeconómico|ionline|sábado|sabado|visao|visão|lusa_noticias|expressoonline"
+        
+    info = u'Regra \"news source!\""-> '        
+    regex = ur'(\W|^)#({0})|@({0})|\(({0})\)|\[({0})\](\W|$)'.format(newsSourceList)
+    lsentence = sentence.lower()
+    
+    """
+    if useTaggedSentence:
+        sentence = opinion.processedSentence.lower()
+    else:
+        sentence = opinion.sentence.lower()
+    
+    
+    if sentence.find(u"falta de") == -1:
+        
+        return None
+    """
+     
+    match = re.search(regex,lsentence)
+    
+    if match != None:
+        
+        #info += match.group() 
+        
+        return 1 
+        
+    else:
+        return 0
+
 
 def logTweets(listOfTweets,path):
     
@@ -246,11 +304,11 @@ def testOldProcessWithDiagnostics(sourceFile):
     
             i = i+1
             
-            
+            """
             if i!=0 and i%10 == 0:
                 
                 break
-            
+            """
             
     print "tweets loaded..."
     
@@ -379,13 +437,81 @@ def processFiles():
         print "processing ", baseFileName, "..."
         generateFeatures(False,infile,DESTINY_PATH+baseFileName.replace(".csv","")+"_feats.csv")        
 
+def separateSpecialSymbols(sentence):
+    
+    symbols = [",","!",":",";",".","-","_","+","*","@","£","#","$","\"","%","&","(",")","/","<",">","[","]","^","{","}","|","'","~","?"]
+    
+    newSentence = sentence
+    
+    for s in symbols:
+        newSentence = newSentence.replace(s," "+s+" ")
+        
+    return newSentence
+
+def testPickles(v):
+    
+    if v == 1:
+        s = getSentiTokens()
+    
+        f = codecs.open("./sentiPickle", "w")
+    
+        pickle.dump(s,f, pickle.HIGHEST_PROTOCOL)
+    
+    if v == 0:
+        
+        f = codecs.open("./sentiPickle", "r")
+        
+        s = pickle.load(f)
+                
+        for senti in s:
+            
+            print senti.tostring()
+        
+    if v == 2:
+        
+        s = getSentiTokens()
+        
+        for senti in s:
+            
+            print senti.tostring()
+
+def testPickles2(v):
+    
+    if v == 1:
+        s = getSentiTokens()
+        p = getPoliticians()
+        mw = getMultiWordsTokenizer(p, s)
+        
+        print mw.multiWordsRegex
+        
+        f = codecs.open("./mwPickle", "w")
+    
+        pickle.dump(mw,f, pickle.HIGHEST_PROTOCOL)
+    
+    if v == 0:
+        
+        f = codecs.open("./mwPickle", "r")
+        
+        mw = pickle.load(f)
+        
+        print mw.multiWordsRegex
+                        
+    if v == 2:
+        
+        s = getSentiTokens()
+        
+        for senti in s:
+            
+            print senti.tostring()        
 
 if __name__ == '__main__':
     
     print "GO"
     
     #processFiles()
-    generateFeatures(True,GOLD_STANDARD,"./tweetsFeatureVectors.arff")
+    generateFeatures(True,GOLD_STANDARD,"./tweetsFeatureVectors3.arff")
+    #generateFeatures(True,GOLD_STANDARD_TEST,"./tweetsFeatureVectorsTest2.arff")
     #testOldProcessWithDiagnostics(GOLD_STANDARD)
+    #testPickles2(0)
     
     print "Done!"

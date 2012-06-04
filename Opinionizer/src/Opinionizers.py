@@ -21,8 +21,8 @@ class Naive:
         self.persons = persons        
         self.sentiTokens = sentiTokens    
         
-        buffer = StringIO.StringIO()
-        buffer.write(u'')
+        buff = StringIO.StringIO()
+        buff.write(u'')
         
         regexTemplate = ur"(?:\W{0}(?:\W|$))|"
         
@@ -31,32 +31,32 @@ class Naive:
             
             for name in person.names:
                                     
-                    #buffer.write(u"\W?" + name + u"\W?|")
-                    buffer.write(regexTemplate.format(name))
+                    #buff.write(u"\W?" + name + u"\W?|")
+                    buff.write(regexTemplate.format(name))
             
             for nickName in person.nicknames:
                     
-                    #buffer.write(u"\W??" + nickName + u"\W?|")
-                    buffer.write(regexTemplate.format(nickName))
+                    #buff.write(u"\W??" + nickName + u"\W?|")
+                    buff.write(regexTemplate.format(nickName))
                     
             for ergo in person.ergos:
                 
-                    #buffer.write(u"\W??" + ergo + u"\W??|")
-                    buffer.write(regexTemplate.format(ergo))
+                    #buff.write(u"\W??" + ergo + u"\W??|")
+                    buff.write(regexTemplate.format(ergo))
                     
 
-        self.targetsRegex = buffer.getvalue().strip('|')
+        self.targetsRegex = buff.getvalue().strip('|')
         
-        buffer = StringIO.StringIO()
+        buff = StringIO.StringIO()
                  
         # Build a regex for identifying sentiment tokens
         for sentiToken in sentiTokens:
             
             for token in sentiToken.getTokens():
                 
-                buffer.write(regexTemplate.format(token))  
+                buff.write(regexTemplate.format(token))  
         
-        self.sentiTokensRegex = buffer.getvalue().strip('|')
+        self.sentiTokensRegex = buff.getvalue().strip('|')
     
     def isFalsePositive(self,mention,sentence):
         
@@ -257,23 +257,23 @@ class MultiWordHandler:
             list of multiwords
         """
         
-        buffer =  StringIO.StringIO()
+        buff =  StringIO.StringIO()
         
         for multiWord in listOfMultiWords:
             
-            if multiWord not in self.multiWordsRegex and multiWord not in buffer.getvalue(): 
-                buffer.write(self.regexTemplate.format(multiWord))
+            if multiWord not in self.multiWordsRegex and multiWord not in buff.getvalue(): 
+                buff.write(self.regexTemplate.format(multiWord))
             
                 #add a normalized (no accents) version
                 if multiWord != Utils.normalize(multiWord):
-                    buffer.write(self.regexTemplate.format(Utils.normalize(multiWord)))
+                    buff.write(self.regexTemplate.format(Utils.normalize(multiWord)))
         
         if len(self.multiWordsRegex) == 0:
-            self.multiWordsRegex = buffer.getvalue().strip('|')
+            self.multiWordsRegex = buff.getvalue().strip('|')
         else:
-            self.multiWordsRegex += "|" + buffer.getvalue().strip('|')
+            self.multiWordsRegex += "|" + buff.getvalue().strip('|')
       
-        buffer.close()
+        buff.close()
 
 class Rules:
 
@@ -336,7 +336,7 @@ class Rules:
         self.vsupRegex = self.getRegexFromList(self.VSUP)
         self.populateSentiRegexes(sentiTokens)
             
-    def getRegexFromList(self,list):
+    def getRegexFromList(self,wordList):
         
         """
             Builds a regex from a list of words 
@@ -344,15 +344,15 @@ class Rules:
         
         regex = ur''
         
-        buffer = StringIO.StringIO()
+        buff = StringIO.StringIO()
         
-        for token in list:
+        for token in wordList:
             
-            buffer.write(token)
-            buffer.write("|")
+            buff.write(token)
+            buff.write("|")
         
-        regex += buffer.getvalue().strip('|')
-        buffer.close()
+        regex += buff.getvalue().strip('|')
+        buff.close()
         
         return regex 
         
@@ -715,6 +715,8 @@ class Rules:
                 return (-1,info)
             else:
                 return None
+    
+    
     
     def rule1(self,opinion,useTaggedSentence):
         
@@ -2131,26 +2133,39 @@ def testSintaticRules():
     s39 = [sentenceNoMatch,u" o sócrates não tem muita coragem ",u" o sócrates não tem coragem "]    
     s40 = [sentenceNoMatch,u" o sócrates tem muito medo ",u" o sócrates tem medo "]
     s41 = [sentenceNoMatch,u" o sócrates tem falta de coragem ",u" o sócrates tem falta de alegria "]
-        
     
     ruler = getTestRuler()
-    #mw = getMultiWordsHandler()    
-    
-    for sentence in s41:
-    
-        o = Opinion(1,sentence,u"socrates",u"sócrates",0,None,u"Manual",u"Manual",None)
-        #o.processedSentence = mw.tokenizeMultiWords(sentence)
-        #print "tagged: ", o.processedSentence
-        #v = ruler.rule33(o,False)
-        v = ruler.rule41(o,True)
         
-        print sentence, "->", v 
-        print "------------------"
+    testCases =[s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11,s12,s13,s14,s15,s16,s17,s18,s19,s20,s21,s22,s23,s24,s25,s26,s27,s28,s29,s30,s31,s32,s33,s34,s35,s37,s38,s39,s40,s41]
+    rules = [ruler.rule1,ruler.rule2,ruler.rule3,ruler.rule4,ruler.rule5,ruler.rule6,ruler.rule7,ruler.rule8,ruler.rule9,ruler.rule10,ruler.rule11,ruler.rule12,ruler.rule13,ruler.rule14,ruler.rule15,ruler.rule16,ruler.rule17,ruler.rule18,ruler.rule19,ruler.rule20,ruler.rule21,ruler.rule22,ruler.rule23,ruler.rule24,ruler.rule25,ruler.rule26,ruler.rule27,ruler.rule28,ruler.rule29,ruler.rule30,ruler.rule31,ruler.rule32,ruler.rule33,ruler.rule34,ruler.rule35,ruler.rule37,ruler.rule38,ruler.rule39,ruler.rule40,ruler.rule41]
+    
+    
+    #mw = getMultiWordsHandler()    
+    i=0
+    
+    while i < len(testCases):
+        
+        print "REGRA ", rules[i]
+        
+        for sentence in testCases[i]:
+    
+            o = Opinion(1,sentence,u"socrates",u"sócrates",0,None,u"Manual",u"Manual",None)
+            #o.processedSentence = mw.tokenizeMultiWords(sentence)
+            #print "tagged: ", o.processedSentence
+            #v = ruler.rule33(o,False)
+            
+            v = rules[i](o,False)
+            
+            print sentence, "->", v 
+            print "------------------"
+        
+        print "\n\n"
+        i+=1
     
 def getTestRuler():
 
     politiciansFile = "../Resources/politicians.txt"
-    sentiTokensFile = "../Resources/sentiTokens-2011-05-30.txt"
+    sentiTokensFile = "../Resources/SentiLex-flex-PT02.txt"
     exceptTokensFile = "../Resources/SentiLexAccentExcpt.txt"
     
     politicians = Persons.loadPoliticians(politiciansFile)
@@ -2161,7 +2176,7 @@ def getTestRuler():
 def getMultiWordsHandler():
     
     politiciansFile = "../Resources/politicians.txt"
-    sentiTokensFile = "../Resources/sentiTokens-2011-05-24.txt"
+    sentiTokensFile = "../Resources/SentiLex-flex-PT02.txt"
     exceptTokensFile = "../Resources/SentiLexAccentExcpt.txt"
     multiWordsFile = "../Resources/multiwords.txt"
     

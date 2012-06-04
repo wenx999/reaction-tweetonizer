@@ -21,6 +21,7 @@ import sys
 import Utils
 import random
 import json
+import pickle
 import Preprocessor
 
 TARGET = 0
@@ -28,6 +29,9 @@ N_TWEETS = 1
 POSITIVES = 2
 NEUTRALS = 3
 NEGATIVES = 4
+SENTI_CACHE = "../cache/sentiTokens.cache"
+PERSONS_CACHE = "../cache/persons.cache"
+MULTIWORD_CACHE = "../cache/multiwords.cache"
 
 access_key_test = "284707222-ZRvtSilVFXGcEYT8AZ04STWP9q7VXofN3L3Ufx2s"
 access_secret_test = "1PkYjXaJWzSyd0K6Z4g5Wsg6NZ9iVNNOxI277ELrbqA"
@@ -192,7 +196,7 @@ def getNewTweets(beginDate,endDate,proxy):
     
     #username = "twitter_crawl_user"
     #password = "twitter_crawl_pass"
-    requestTweets = "http://pattie.fe.up.pt/solr/portugal/select?q=created_at:[{0}%20TO%20{1}]&indent=on&wt=json&rows=1000&fl=text,id,created_at,user_id"
+    requestTweets = "http://pattie.fe.up.pt/solr/portugal/select?q=created_at:[{0}%20TO%20{1}]&indent=on&wt=json&rows={2}&fl=text,id,created_at,user_id"
     #requestTweets = "http://pattie.fe.up.pt/solr/portugal/select?q=created_at:[2012-05-25T13:00:00Z%20TO%202012-05-25T15:00:00Z]&indent=on&wt=json&rows=1000&fl=text,id,created_at,user_id"
     
     #Password manager because the service requires authentication
@@ -215,31 +219,39 @@ def getNewTweets(beginDate,endDate,proxy):
         twitterData = sys.stdin;
         
     else:
-        finalRequest = requestTweets.format(urllib.quote(beginDate.strftime('%Y-%m-%dT%H:%M:%SZ')),
-                                                    urllib.quote(endDate.strftime('%Y-%m-%dT%H:%M:%SZ')))
-        print "Requesting: " + finalRequest
+        #First we need to know how many tweets match our query (so we can retrieve them all
+        #at once
+        request = requestTweets.format(urllib.quote(beginDate.strftime('%Y-%m-%dT%H:%M:%SZ')),
+                                       urllib.quote(endDate.strftime('%Y-%m-%dT%H:%M:%SZ')),
+                                       1)        
         
-        twitterData = opener.open(finalRequest)
+        data = opener.open(request)
+        
+        numOfTweets = simplejson.loads(unicode(data.read().decode("utf-8")))["response"]["numFound"]
+        
+        #now we know how many rows to ask..
+        request = requestTweets.format(urllib.quote(beginDate.strftime('%Y-%m-%dT%H:%M:%SZ')),
+                                       urllib.quote(endDate.strftime('%Y-%m-%dT%H:%M:%SZ')),
+                                       numOfTweets)
+        
+        print "Requesting: " + request
+        
+        twitterData = opener.open(request)
         
     #Read the JSON response
-    jsonTwitter = simplejson.loads(unicode(twitterData.read().decode("utf-8")))
-    
-    print jsonTwitter["response"]
-  
+    jsonTwitter = simplejson.loads(unicode(twitterData.read().decode("utf-8")))  
                                 
     listOfTweets = []
     
     #Build a dictionary
     for tweet in jsonTwitter["response"]["docs"]:
     
-        #id = str(tweet["user_id"]) + "_" + str(tweet["id"])
-        
-        userId = unicode(tweet["user_id"])
-        #print userId
-        
         date =  datetime.strptime(tweet["created_at"], '%Y-%m-%dT%H:%M:%Sz')
         
-        listOfTweets.append(Opinion(tweet["id"],unicode(tweet["text"]),user=userId,date=date))
+        listOfTweets.append(Opinion(tweet["id"],
+                                    unicode(tweet["text"]),
+                                    user=unicode(tweet["user_id"]),
+                                    date=date))
     
     print len(listOfTweets), " tweets loaded\n"  
    
@@ -331,7 +343,29 @@ def formatStats(stats,nTweets,beginDate,endDate):
     
     return tweetMessages
 
-def processTweets(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,tweets):
+def getFromCache(filename):
+    
+    obj = None
+    
+    try:
+        f = open(filename, "r")    
+        obj = pickle.load(f)
+    except IOError:
+        obj = None
+        
+    return obj
+
+def putInCache(obj, filename):
+    
+    f = open(filename, "w")
+    
+    try:
+        pickle.dump(obj,f, pickle.HIGHEST_PROTOCOL)
+    except IOError:
+        print "ERROR: Couldn't save cache..."
+    
+
+def processTweets(targetsFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,tweets):
     
     """ 
         Processes a list of tweets:
@@ -345,23 +379,47 @@ def processTweets(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFi
          tweets -> list of tweets
     """
     
-    print "Loading resources...\nPoliticians: " + politiciansFile
-    t0 = datetime.now()   
-    politicians = Persons.loadPoliticians(politiciansFile)
+    print "Loading resources...\nTargets: " + targetsFile
+    t0 = datetime.now()
+    
+    targets = getFromCache(PERSONS_CACHE)
+    
+    if targets != None:
+        print "Target list found on cache!"
+    else:
+        targets = Persons.loadPoliticians(targetsFile)
+        putInCache(targets, PERSONS_CACHE)
+        
     Ttotal = datetime.now() - t0
     print "done (" + str(Ttotal) + ")" 
     
     print "SentiTokens: " + sentiTokensFile + "\nExceptTokens: " +  exceptSentiTokens
-    t0 = datetime.now()   
-    sentiTokens = SentiTokens.loadSentiTokens(sentiTokensFile,exceptSentiTokens)
+    t0 = datetime.now() 
+    
+    sentiTokens = getFromCache(SENTI_CACHE)  
+    
+    if sentiTokens != None:
+        print "SentiTokens found on cache!"
+    else:
+        sentiTokens = SentiTokens.loadSentiTokens(sentiTokensFile,exceptSentiTokens)
+        putInCache(sentiTokens, SENTI_CACHE)
+        
     Ttotal = datetime.now() - t0
     print "done (" + str(Ttotal) + ")"
     
     print "Multiword Tokenizer " + multiWordsFile
     t0 = datetime.now()       
-    multiWordTokenizer = MultiWordHandler(multiWordsFile)
-    multiWordTokenizer.addMultiWords(Persons.getMultiWords(politicians))
-    multiWordTokenizer.addMultiWords(SentiTokens.getMultiWords(sentiTokens))    
+    
+    multiWordTokenizer = getFromCache(MULTIWORD_CACHE)
+    
+    if multiWordTokenizer != None:
+        print "Multiword Tokenizer found on cache"
+    else:
+        multiWordTokenizer = MultiWordHandler(multiWordsFile)
+        multiWordTokenizer.addMultiWords(Persons.getMultiWords(targets))
+        multiWordTokenizer.addMultiWords(SentiTokens.getMultiWords(sentiTokens))
+        putInCache(multiWordTokenizer, MULTIWORD_CACHE)
+            
     Ttotal = datetime.now() - t0
     print "done (" + str(Ttotal) + ")"
     
@@ -370,7 +428,7 @@ def processTweets(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFi
     print "Identifying targets..."
     t0 = datetime.now()  
     
-    naive = Naive(politicians,sentiTokens)    
+    naive = Naive(targets,sentiTokens)    
     
     targetedTweets = {}    
     classifiedTweets = {}
@@ -398,7 +456,7 @@ def processTweets(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFi
     
     print  len(targetedTweets), " targets Identified! Inferring polarity..."
     
-    rules = Rules(politicians,sentiTokens)
+    rules = Rules(targets,sentiTokens)
     
     #Second step infer polarity 
     for target,tweets in targetedTweets.items():
@@ -543,7 +601,7 @@ if __name__ == '__main__':
     randomizeTweets = False
     beginDate = datetime.today() - timedelta(1)
     endDate = datetime.today()     
-    politiciansFile = "../Resources/politicians.txt"
+    politiciansFile = "../Resources/players.txt"
     sentiTokensFile = "../Resources/SentiLex-flex-PT02.txt"    
     exceptSentiTokens = "../Resources/SentiLexAccentExcpt.txt"
     multiWordsFile = "../Resources/multiwords.txt"

@@ -1,0 +1,23 @@
+eduardo:Eduardo;;;
+rpatricio:Rui Patrício,Rui Patricio;;;
+beto:Beto;;;
+balves:Bruno Alves,Bruto Alves;;;
+pepe:Pepe;;;
+fcoentrao:Fábio Coentrão,Coentrão,Figo das Caxinas,Caxineiro;;;
+rcosta:Ricardo Costa;;;
+rolando:Rolando;;;
+mlopes:Miguel Lopes;;;
+jpereira:João Pereira,Joao Pereira;;;
+mveloso:Miguel Veloso;;;
+custodio:Custódio;;;
+jmoutinho:João Moutinho;;;
+quaresma:Quaresma,Cigano,Trivela;;;
+rmicael:Rúben Micael,Ruben Micael;;;
+nani:Nani;;;
+hviana:Hugo Viana;;;
+cronaldo:Cristiano Ronaldo,CR7;;;
+noliveira:Nélson Oliveira;;;
+varela:Varela;;;
+postiga:Postiga;;;
+pbento:Paulo Bento;;;
+
