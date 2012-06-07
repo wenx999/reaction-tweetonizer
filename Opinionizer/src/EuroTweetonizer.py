@@ -23,6 +23,7 @@ import random
 import json
 import pickle
 import Preprocessor
+import cStringIO
 
 TARGET = 0
 N_TWEETS = 1
@@ -196,7 +197,7 @@ def getNewTweets(beginDate,endDate,proxy):
     
     #username = "twitter_crawl_user"
     #password = "twitter_crawl_pass"
-    requestTweets = "http://pattie.fe.up.pt/solr/portugal/select?q=created_at:[{0}%20TO%20{1}]&indent=on&wt=json&rows={2}&fl=text,id,created_at,user_id"
+    requestTweets = "http://pattie.fe.up.pt/solr/eurocopa/select?q=created_at:[{0}%20TO%20{1}]&indent=on&wt=json&rows={2}&fl=text,id,created_at,user_id"
     #requestTweets = "http://pattie.fe.up.pt/solr/portugal/select?q=created_at:[2012-05-25T13:00:00Z%20TO%202012-05-25T15:00:00Z]&indent=on&wt=json&rows=1000&fl=text,id,created_at,user_id"
     
     #Password manager because the service requires authentication
@@ -257,6 +258,61 @@ def getNewTweets(beginDate,endDate,proxy):
    
     return listOfTweets
 
+def generateTargetList():
+    
+    targetList = cStringIO.StringIO()
+    requestPlayersList = "http://voxx.sapo.pt/cgi-bin/Euro2012/get_players.pl"
+   
+    opener = urllib2.build_opener()       
+        
+    print "Requesting: " + requestPlayersList
+        
+    playersList = opener.open(requestPlayersList)
+        
+    #Read the JSON response
+    jsonData = simplejson.loads(unicode(playersList.read().decode("utf-8")))  
+    
+    #{"player_name":"Cristiano Ronaldo","player_num":"7","player_photo":"http://desporto_stats.imgs.sapo.pt/9/People/382.png","player_position":"A","player_full_name":"Cristiano Ronaldo dos Santos Aveiro","player_id":"198","teamId":"7184"}
+    
+    for player in jsonData["listPlayers"]:
+        
+        targetList.write("p_"+player["player_id"])
+        targetList.write(":")
+        targetList.write(player["player_name"])
+        targetList.write(",")
+        targetList.write(player["player_full_name"])
+        targetList.write(";;;\n")
+       
+    requestTeamsList = "http://voxx.sapo.pt/cgi-bin/Euro2012/get_teams.pl"
+   
+    opener = urllib2.build_opener()       
+        
+    print "Requesting: " + requestTeamsList
+        
+    teamsList = opener.open(requestTeamsList)
+        
+    #Read the JSON response
+    jsonData = simplejson.loads(unicode(teamsList.read().decode("utf-8")))  
+        
+    #{"officialName":"Germany","aliasShort":"DE","name":"Alemanha","flag":"http://desporto_stats.imgs.sapo.pt/3/flags/226.png","group":"B","endDate":"2012-07-02","beginDate":"2012-06-08","id":"7165","alias":"GER"}
+    for team in jsonData["ListTeams"]:
+        
+        targetList.write("t_"+team["id"])
+        targetList.write(":")
+        targetList.write(team["name"])
+        targetList.write(",")
+        targetList.write(team["officialName"])
+        targetList.write(",")
+        targetList.write(team["aliasShort"])
+        targetList.write(",")
+        targetList.write(team["alias"])
+        targetList.write(";;;\n")        
+        
+    f = codecs.open("../Resources/players.txt","w","utf-8")
+    
+    f.write(unicode(targetList.getvalue()))
+    f.close()   
+        
 def printMessages(messages):
     
     for message in messages:
@@ -382,7 +438,7 @@ def processTweets(targetsFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,t
     print "Loading resources...\nTargets: " + targetsFile
     t0 = datetime.now()
     
-    targets = getFromCache(PERSONS_CACHE)
+    targets = None #getFromCache(PERSONS_CACHE)
     
     if targets != None:
         print "Target list found on cache!"
@@ -591,7 +647,6 @@ def main(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,logFol
     
 if __name__ == '__main__':   
     
-
     #Default values
     proxy = None
     realTime = None
@@ -687,4 +742,3 @@ if __name__ == '__main__':
         print "Done!"
     else:
         processSingleSentence(politiciansFile, sentiTokensFile, exceptSentiTokens, singleSentence,webOutput)
-

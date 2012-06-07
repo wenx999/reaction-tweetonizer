@@ -139,7 +139,7 @@ def generateFeatures(isGoldStandard, sourceFile, destinyFile):
     
     featuresFile = open(destinyFile,"w") 
     featuresFile.write(ARFF_HEADERS)
-    unknownSentiFile = open("./unknownSentiment.txt","w")
+    unknownSentiFile = codecs.open("./unknownSentiment.csv","w","utf-8")
         
     featurama = cStringIO.StringIO()
     unknownSentiment = cStringIO.StringIO()
@@ -195,7 +195,7 @@ def generateFeatures(isGoldStandard, sourceFile, destinyFile):
         
             i+=1
         else:
-            unknownSentiment.write(tweet.id+"\n")
+            unknownSentiment.write(str(tweet.id)+"|"+str(tweet.polarity)+"|"+tweet.sentence+"\n")
             
         
     featuresFile.write(featurama.getvalue())
@@ -368,6 +368,176 @@ def testOldProcessWithDiagnostics(sourceFile):
     g.close()                
     print results
 
+def testSubjectivity(sourceFile):
+    
+    corpus = codecs.open(sourceFile,"r","utf-8")
+    
+    listOfTweets = []
+    rejectList = []
+    i=0
+    
+    politicians = getPoliticians()
+    sentiTokens = getSentiTokens()
+    
+    #rulesClassifier = Opinionizers.Rules(politicians,sentiTokens)     
+    naiveClassifier = Opinionizers.Naive(politicians,sentiTokens)    
+    #multiWordTokenizer = getMultiWordsTokenizer(politicians, sentiTokens)
+    
+    print "loading tweets..."
+    
+    for line in corpus:
+        
+        tweet = line.replace("\"","\'").split('|')
+        
+        #skip the first line
+        if tweet[0] != 'PERIOD':
+            
+            #print tweet
+            
+            fullSentence = ''
+            
+            #in some cases the message spawns across several fields so we are concatenating them...
+            for block in tweet[TEXT:]:
+                fullSentence = fullSentence + block
+                
+            tokenizedSentence = separateSpecialSymbols(unicode(fullSentence)) #multiWordTokenizer.tokenizeMultiWords(unicode(fullSentence))
+            #tokenizedSentence =  Preprocessor.removeURLs(tokenizedSentence)
+            #tokenizedSentence = Preprocessor.removeUsernames(tokenizedSentence)            
+            print tokenizedSentence
+            
+            o = Opinion(id = tweet[ID],
+                        user = u"Teste",
+                        sentence = unicode(fullSentence),
+                        processedSentence = tokenizedSentence,
+                        target = unicode(tweet[TARGET]),
+                        mention = unicode(tweet[MENTION]),
+                        polarity = int(tweet[SENTIMENT_POLARITY]))
+            
+            matches = re.findall(naiveClassifier.sentiTokensRegex ,tokenizedSentence) 
+            
+            if matches != None and len(matches) > 0:  
+            
+                listOfTweets.append(o)
+                
+            else:
+                rejectList.append(o) 
+            
+            i = i+1
+            
+            """
+            if i!=0 and i%30 == 0:
+                
+                break
+            """
+    
+    logTweets(listOfTweets,"./listOfTweets.csv")
+    logTweets(rejectList,"./rejectList.csv")
+
+def genFeatsWithSubjectivity(isGoldStandard,sourceFile, destinyFile):
+    
+    corpus = codecs.open(sourceFile,"r","utf-8")
+     
+    politicians = getPoliticians()
+    sentiTokens = getSentiTokens()
+    
+    rulesClassifier = Opinionizers.Rules(politicians,sentiTokens)     
+    naiveClassifier = Opinionizers.Naive(politicians,sentiTokens)    
+    multiWordTokenizer = getMultiWordsTokenizer(politicians, sentiTokens)
+    listOfTweets = []
+    
+    i=0
+    
+    for line in corpus:
+        
+        tweet = line.replace("\"","\'").split('|')
+        
+        #skip the first line
+        if tweet[0] != 'PERIOD':            
+            
+            sentence = ''
+            
+            for block in tweet[TEXT:]:
+                sentence = sentence + block
+                           
+            tokenizedSentence = multiWordTokenizer.tokenizeMultiWords(sentence)            
+            tokenizedSentence = Preprocessor.removeURLs(tokenizedSentence)
+            tokenizedSentence = Preprocessor.removeUsernames(tokenizedSentence)
+            tokenizedSentence =  separateSpecialSymbols(tokenizedSentence)
+            
+            o = Opinion(id = tweet[ID],
+                        sentence = unicode(sentence),
+                        processedSentence = unicode(tokenizedSentence),
+                        target = unicode(tweet[TARGET]),
+                        mention = unicode(tweet[MENTION]),
+                        polarity = int(tweet[SENTIMENT_POLARITY]))
+            
+            listOfTweets.append(o)
+    
+            i = i+1
+        """          
+        if i!=0 and i%20 == 0:
+            
+            break
+        """
+        
+    print "tweets loaded..."
+    
+    featuresFile = open(destinyFile,"w") 
+    featuresFile.write(ARFF_HEADERS)
+    unknownSentiFile = codecs.open("./unknownSentiment.csv","w","utf-8")
+        
+    featurama = cStringIO.StringIO()
+    unknownSentiment = cStringIO.StringIO()    
+    
+    tmp = cStringIO.StringIO()
+    
+    for tweet in listOfTweets:
+                
+        #used to verify if an instance matches any rule and\or has any sentiToken
+        #if after processing this var still has value 0 then we don't add it to 
+        #the training set...
+        sentiCounter = 0
+        
+        tmp = cStringIO.StringIO()
+        tmp.write(str(tweet.id)+ ",")
+                 
+        featureSet = rulesClassifier.generateFeatureSet(tweet,True)
+                
+        for feature in featureSet:
+            tmp.write(str(feature) + ",")
+            sentiCounter += feature
+               
+        naiveClassification = naiveClassifier.inferPolarity(tweet,True)
+        tmp.write(str(naiveClassification.polarity) + ",")
+        sentiCounter+= naiveClassification.polarity
+                        
+        pos = naiveClassification.metadata.find("score:")
+        score = naiveClassification.metadata[pos+6:].replace(";","")
+        tmp.write(str(score) + ",")        
+        sentiCounter+= int(score)
+        
+        isNews = isNewsSource(tweet.sentence)
+        tmp.write(str(isNews) + ",")
+        sentiCounter+= isNews
+        
+        if sentiCounter != 0:
+            
+            if isGoldStandard:
+                    
+                featurama.write(tmp.getvalue()+str(tweet.polarity)+","+tweet.processedSentence.replace(",","")+"\n")
+            
+            else:
+                featurama.write(tmp.getvalue()+"?\n")
+        else:
+            unknownSentiment.write(str(tweet.id)+"|"+str(tweet.polarity)+"|"+tweet.sentence+"\n")
+            
+        
+    featuresFile.write(featurama.getvalue())
+    featuresFile.close()
+    unknownSentiFile.write(unknownSentiment.getvalue())
+    unknownSentiFile.close() 
+    
+    
 def rulesDiagnosticHelper(rulesVector):
     
     setOfRules = ["hasNickName","hasInterjectionWithTarget","hasInterjection","hasLol","hasHehe","hasHeavyPunctuation",
@@ -408,13 +578,6 @@ def getRulesClassifier(politicians, sentiTokens):
     return Opinionizers.Rules(politicians,sentiTokens)    
 
 def getNaiveClassifier(politicians, sentiTokens):
-
-    #politiciansFile = "../Resources/politicians.txt"
-    #sentiTokensFile = "../Resources/SentiLex-flex-PT02.txt"
-    #exceptTokensFile = "../Resources/SentiLexAccentExcpt.txt"
-    
-    #politicians = Persons.loadPoliticians(politiciansFile)
-    #sentiTokens = SentiTokens.loadSentiTokens(sentiTokensFile,exceptTokensFile)
     
     return Opinionizers.Naive(politicians,sentiTokens)    
 
@@ -448,70 +611,302 @@ def separateSpecialSymbols(sentence):
         
     return newSentence
 
-def testPickles(v):
+def removeStopWords(sentence):
     
-    if v == 1:
-        s = getSentiTokens()
+    stopwords = [" a ","1","2","3","4","5","6","7","8","9","0"
+" à ",
+" aí ",
+" « ",
+" » "
+" acusa ",
+" agora ",
+" ainda ",
+" ao ",
+" aos ",
+" aqui ",
+" as ",
+" assim ",
+" até ",
+" be ",
+" bem ",
+" bit ",
+" c ",
+" co ",
+" com ",
+" cm ",
+" cá "
+" como ",
+" cont ",
+" contra ",
+" d ",
+" da ",
+" do "
+" dá ",
+" dão "
+" dar ",
+" das ",
+" dos "
+" de ",
+" deck ",
+" depois ",
+" dia ",
+" disse ",
+" diz ",
+" dizer ",
+" dlvr ",
+" do ",
+" dos ",
+" dd ",
+" e ",
+" é ",
+" ele ",
+" eleições ",
+" em ",
+" entre ",
+" era ",
+" eram ",
+" esta ",
+" está ",
+" este ",
+" essa ",
+" esse ",
+" eu ",
+" eu ",
+" fala ",
+" falar ",
+" faz ",
+" fazer ",
+" fb ",
+" fez ",
+" foi ",
+" frente ",
+" g ",
+" gl ",
+" goo ",
+" h ",
+" há ",
+" i ",
+" isso ",
+" isto ",
+" it ",
+" j ",
+" já ",
+" k ",
+" l ",
+" lá ",
+" lhe ",
+" ly ",
+" m ",
+" mais ",
+" mas ",
+" me ",
+" mesmo ",
+" mil ",
+" muito ",
+" n ",
+" na ",
+" nada ",
+" não ",
+" nas ",
+" nem ",
+" no ",
+" nos ",
+" novas ",
+" o ",
+" ontem ",
+" oportunidades ",
+" os ",
+" ou ",
+" ow ",
+" p ",
+" país ",
+" para ",
+" pela ",
+" pelo ",
+" pode ",
+" por ",
+" porque ",
+" portugal ",
+" programa ",
+" ps ",
+" pt ",
+" q ",
+" quando ",
+" que ",
+" quem ",
+" quer ",
+" rt ",
+" s ",
+" sabe ",
+" são ",
+" se ",
+" sem ",
+" ser ",
+" seu ",
+" seu ",
+" só ",
+" sobre ",
+" sua ",
+" t ",
+" te ",
+" também ",
+" tem ",
+" ter ",
+" tudo ",
+" tvi ",
+" um ",
+" uma ",
+" vai ",
+" ver ",
+" vez ",
+" vs ",
+" www ",
+]
+    newSentence = sentence
     
-        f = codecs.open("./sentiPickle", "w")
-    
-        pickle.dump(s,f, pickle.HIGHEST_PROTOCOL)
-    
-    if v == 0:
+    for word in stopwords:
+        newSentence = newSentence.replace(word," ")
         
-        f = codecs.open("./sentiPickle", "r")
-        
-        s = pickle.load(f)
-                
-        for senti in s:
-            
-            print senti.tostring()
-        
-    if v == 2:
-        
-        s = getSentiTokens()
-        
-        for senti in s:
-            
-            print senti.tostring()
+    return newSentence
 
-def testPickles2(v):
+def generateTextFeatures(sourceFile,destinyFile):
     
-    if v == 1:
-        s = getSentiTokens()
-        p = getPoliticians()
-        mw = getMultiWordsTokenizer(p, s)
-        
-        print mw.multiWordsRegex
-        
-        f = codecs.open("./mwPickle", "w")
+    corpus = codecs.open(sourceFile,"r","utf-8")
+     
+    politicians = getPoliticians()
+    sentiTokens = getSentiTokens()
     
-        pickle.dump(mw,f, pickle.HIGHEST_PROTOCOL)
+    #rulesClassifier = Opinionizers.Rules(politicians,sentiTokens)     
+    #naiveClassifier = Opinionizers.Naive(politicians,sentiTokens)    
+    multiWordTokenizer = getMultiWordsTokenizer(politicians, sentiTokens)
+    listOfTweets = []
     
-    if v == 0:
+    i=0
+    headers = """
+    
+
+@relation twitometro
+
+@ATTRIBUTE ID NUMERIC 
+@ATTRIBUTE tweet STRING
+@ATTRIBUTE polarity? {-1,0,1}
+
+@data
+ 
+    """
+
+    featuresFile = open(destinyFile,"w") 
+    featuresFile.write(headers)
+    
+    for line in corpus:
         
-        f = codecs.open("./mwPickle", "r")
+        tweet = line.replace("\"","\'").split('|')
         
-        mw = pickle.load(f)
-        
-        print mw.multiWordsRegex
-                        
-    if v == 2:
-        
-        s = getSentiTokens()
-        
-        for senti in s:
+        #skip the first line
+        if tweet[0] != 'PERIOD':            
             
-            print senti.tostring()        
+            sentence = ''
+            
+            for block in tweet[TEXT:]:
+                sentence = sentence + block
+                           
+            tokenizedSentence = multiWordTokenizer.tokenizeMultiWords(sentence)
+            tokenizedSentence =  Preprocessor.removeURLs(tokenizedSentence)
+            tokenizedSentence = Preprocessor.removeUsernames(tokenizedSentence)
+            tokenizedSentence = tokenizedSentence.replace(tweet[MENTION]," <TARGET> ")
+            tokenizedSentence = removeStopWords(tokenizedSentence)
+            tokenizedSentence = separateSpecialSymbols(tokenizedSentence)
+            tokenizedSentence = tokenizedSentence.replace("\n","") 
+            tokenizedSentence = tokenizedSentence.replace(","," ")
+            
+            featuresFile.write(tweet[ID]+",\""+tokenizedSentence+"\","+tweet[SENTIMENT_POLARITY]+"\n")
+            print sentence + " --> " + tokenizedSentence
+            
+            """
+            o = Opinion(id = tweet[ID],
+                        sentence = unicode(sentence),
+                        processedSentence = unicode(tokenizedSentence),
+                        target = unicode(tweet[TARGET]),
+                        mention = unicode(tweet[MENTION]),
+                        polarity = int(tweet[SENTIMENT_POLARITY]))
+            
+            listOfTweets.append(o)
+            """
+            
+            i = i+1       
+            
+            """     
+            if i!=0 and i%20 == 0:
+            
+                break
+            """
+            
+    featuresFile.close()   
+
+def a1():
+    
+    return None #"a1"    
+
+def a2():
+    
+    return "a2"
+
+def a3():
+    
+    return "a3"
+
+def b1():
+    
+    return None #"b1"
+
+def b2():
+    
+    return "b2"
+
+def c1():
+    
+    return None #"c1"
+
+def c2():
+    
+    return None #"c2"
+
+def c3():
+    
+    return "c3"
+    
+def rulesCluster():
+        
+    setOfRules = [[a1,a2,a3],[b1,b2],[c1,c2,c3]]
+    featureSet = []
+    
+    for rules in setOfRules:
+        
+        match = False
+        
+        for rule in rules:
+            
+            if not match:
+                result = rule()
+            
+                if result != None:
+                    match = True
+                    featureSet.append(result)
+                else:
+                    featureSet.append(0)
+            else:
+                featureSet.append(0)
+                
+    return featureSet     
 
 if __name__ == '__main__':
     
     print "GO"
+    print rulesCluster()
+    #generateTextFeatures(GOLD_STANDARD,"./tweetsTextVector.arff")
+    #generateTextFeatures(GOLD_STANDARD_TEST,"./tweetsTextVectorTest.arff")
+    #genFeatsWithSubjectivity(True,GOLD_STANDARD,"./tweetsFeats2.arff")
+    #genFeatsWithSubjectivity(True,GOLD_STANDARD_TEST,"./tweetsFeatsTest.arff")
     
-    #processFiles()
-    generateFeatures(True,GOLD_STANDARD,"./tweetsFeatureVectors3.arff")
-    #generateFeatures(True,GOLD_STANDARD_TEST,"./tweetsFeatureVectorsTest2.arff")
-    #testOldProcessWithDiagnostics(GOLD_STANDARD)
-    #testPickles2(0)
     
     print "Done!"

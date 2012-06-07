@@ -152,18 +152,18 @@ class Naive:
         
         return None
 
-    def inferPolarity(self,opinion,useTaggedSentence):        
+    def inferPolarity(self,opinion,useProcessedSentence):        
         
         """ 
             Tries to identify the polarity of a sentence
             Params: opinion -> Opinion object
-                    useTaggedSentence -> True to use the tagged (and tokenized) version of the sentence
+                    useProcessedSentence -> True to use the tagged (and tokenized) version of the sentence
             Returns: tuple(inferred polarity, algorithm metadata)
         """
         info = opinion.metadata + "; " + u'sentiTokens:'       
         specialChars = u' “”\"@)(!#;&:\\@/-_,?.«»\' ' 
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
@@ -280,7 +280,7 @@ class MultiWordHandler:
 class Rules:
 
     
-    QUANT = [u'muito',u'mto',u'muita',u'mta', u'mt', u'muitíssimo',u'muitíssima', u'pouco',u'pouca', u'pouquíssimo',u'pouquíssima',
+    QUANT_LIST = [u'muito',u'mto',u'muita',u'mta', u'mt', u'muitíssimo',u'muitíssima', u'pouco',u'pouca', u'pouquíssimo',u'pouquíssima',
              u'bastante',u'completamente', u'imensamente', u'estupidamente', u'demasiado', 
              u'profundamente', u'perfeitamente', u'relativamente', u'simplesmente', 
              u'verdadeiramente', u'inteiramente', u'realmente', 
@@ -289,7 +289,7 @@ class Rules:
              u'absolutamente', u'potencialmente', u'aparentemente', u'exactamente', u'nada',u'nd',
              ]
 
-    VCOP = [u'é', u'foi', u'era', u'será',
+    VCOP_LIST = [u'é', u'foi', u'era', u'será',
             u'está', u'esteve', u'estava', u'estará',
             u'continua', u'continuou', u'continuava', u'continuará',
             u'permanece', u'permaneceu', u'permanecia', u'permanecerá',
@@ -303,12 +303,19 @@ class Rules:
             u'vive', u'viveu', u'vivia', u'viverá'
            ]   
     
-    NCLAS = [u'gajo', u'homem', u'senhor', u'fulano', u'tipo',
-            u'indivíduo', u'rapaz', u'pessoa', u'figura', u'personagem', u'criatura',
-            u'político', u'candidato', u'líder', u'adversário', 
+    NCLAS_LIST = [u'pessoa',  u'homem',  u'rapaz',  u'jovem',  u'gajo',  u'tipo',  u'fulano',
+             u'jogador',  u'atleta',  u'futebolista', u'seleção',  u'selecção',  u'equipa',  
+             u'onze inicial',  u'onze', u'treinador',  u'mister',  u'técnico',  u'selecionador',  
+             u'seleccionador',  u'capitão', u'árbitro',  u'bandeirinha',  u'fiscal de linha',  
+             u'juiz', u'ala',  u'ala direito',  u'ala esquerdo',  u'médio',  u'médio defensivo', 
+             u'médio ofensivo',  u'atacante',  u'avançado',  u'avançado central', 
+             u'central',  u'defesa',  u'defesa direito',  u'defesa esquerdo',
+             u'ponta de lança',  u'guarda redes',  u'guarda-redes',  u'lateral', 
+             u'lateral direito',  u'lateral esquerdo',  u'extremo',  u'médio',  u'trinco',
+             u'político',u'politico' 
             ]
     
-    VSUP = [u'aparenta', u'aparentou', u'aparentava', u'aparentará',
+    VSUP_LIST = [u'aparenta', u'aparentou', u'aparentava', u'aparentará',
             u'apresenta',u'apresentou', u'apresentava', u'apresentará',
             u'continua', u'continuou', u'continuava', u'continuará',
             u'demonstra', u'demonstrou', u'demonstrava', u'demonstrará',
@@ -327,15 +334,17 @@ class Rules:
             u'fica com', u'ficou com', u'ficava com', u'ficará com'
             ]
     
-   
+    NEG_LIST = [u'não',u'nao',u'ñ',u'n']
+    
     def __init__(self,persons,sentiTokens):
     
         self.persons = self.buildPersonsDict(persons)                
         self.sentiTokens = sentiTokens
-        self.quantRegex = self.getRegexFromList(self.QUANT)
-        self.vcopRegex = self.getRegexFromList(self.VCOP)
-        self.nclasRegex = self.getRegexFromList(self.NCLAS)
-        self.vsupRegex = self.getRegexFromList(self.VSUP)
+        self.quant = self.getRegexFromList(self.QUANT_LIST)
+        self.vcop = self.getRegexFromList(self.VCOP_LIST)
+        self.nclas = self.getRegexFromList(self.NCLAS_LIST)
+        self.vsup = self.getRegexFromList(self.VSUP_LIST)
+        self.neg = self.getRegexFromList(self.NEG_LIST)
         self.populateSentiRegexes(sentiTokens)
             
     def getRegexFromList(self,wordList):
@@ -512,11 +521,11 @@ class Rules:
         verbNegRegex.close()
         verbNeutRegex.close()
             
-    def inferPolarity(self,opinion,useTaggedSentence):
+    def inferPolarity(self,opinion,useProcessedSentence):
         
         for rule in self.setOfRules:
 
-            result = rule(self,opinion,useTaggedSentence)
+            result = rule(self,opinion,useProcessedSentence)
             
             if result != None:
              
@@ -525,13 +534,13 @@ class Rules:
         
         return opinion.clone(polarity=0)
 
-    def generateFeatureSet(self,opinion,useTaggedSentence):
+    def generateFeatureSet(self,opinion,useProcessedSentence):
         
         featureSet = []
         
         for rule in self.setOfRules:
             
-            result = rule(self,opinion,useTaggedSentence)
+            result = rule(self,opinion,useProcessedSentence)
             
             if result != None:
              
@@ -541,7 +550,7 @@ class Rules:
                 
         return featureSet
     
-    def hasNickName(self,opinion,useTaggedSentence):
+    def hasNickName(self,opinion,useProcessedSentence):
         
         info = "Nickname: "
         
@@ -560,12 +569,12 @@ class Rules:
             
             return None
     
-    def hasLol(self,opinion,useTaggedSentence):
+    def hasLol(self,opinion,useProcessedSentence):
         
         info = "LOL: "        
         regex = r'(\W|^)(l+o+l+(o+)?)+(\W|$)'
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
@@ -580,12 +589,12 @@ class Rules:
         else:
             return None
    
-    def hasSmiley(self,opinion,useTaggedSentence): 
+    def hasSmiley(self,opinion,useProcessedSentence): 
         
         info = "Smiley: "        
         regex = r'(\W|^)([\W ])[:;xX8]-?([\)\(psd])+.?'
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
@@ -600,12 +609,12 @@ class Rules:
         else:
             return None
        
-    def hasHehe(self,opinion,useTaggedSentence): 
+    def hasHehe(self,opinion,useProcessedSentence): 
         
         info = "Haha: "        
         regex = r'(\W|^)(h[e|a|i]+){2,}|(h[e|a|i] ?){2,}|([a|e]h ?){2,}(\W|$)'
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
@@ -621,12 +630,12 @@ class Rules:
         else:
             return None
     
-    def hasQuotedSentiment(self,opinion,useTaggedSentence): 
+    def hasQuotedSentiment(self,opinion,useProcessedSentence): 
         
         info = "Quoted sentiment: "        
         regex = ur'(\W|^)\".*({0}|{1}).*\"(\W|$)'.format(self.adjsPosRegex,self.nounsPosRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
@@ -642,12 +651,12 @@ class Rules:
         else:
             return None
         
-    def hasHeavyPunctuation(self,opinion,useTaggedSentence): 
+    def hasHeavyPunctuation(self,opinion,useProcessedSentence): 
         
         info = "Heavy Punctuation: "        
         regex = r'(\W|^)([!?]{2,})+.?'
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
@@ -663,12 +672,12 @@ class Rules:
         else:
             return None
         
-    def hasInterjection(self,opinion,useTaggedSentence):
+    def hasInterjection(self,opinion,useProcessedSentence):
                 
         info = "Interjection: "        
         regex = ur'(\W|^)(m+e+r+d+a+|f+o+d+a+-*s+e*|(es)?t[áa] fdd|que no+jo+|cre+do+|li+ndo+|(oh)?meu deus|u+i+|li+vra+|a+ba+i+xo+!|fo+ra+!|ru+a+!|safa!|cruzes!|passou-se!|basta!|fo+go+!|estamos feitos)!*(\W|$)'        
                
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
@@ -684,14 +693,14 @@ class Rules:
         else:
             return None
     
-    def hasInterjectionWithTarget(self,opinion,useTaggedSentence): 
+    def hasInterjectionWithTarget(self,opinion,useProcessedSentence): 
         
         info = u"Interjection with target: "        
         target = opinion.mention.lower()
         regexTargetLeft = ur'(\W|^){0} (nunca mais|jamais)(\W|$)'.format(target)
         regexTargetRight = ur'(\W|^)(oh|obrigado|senhor|anti-|este|esse){0}(\W|$)'.format(target)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
@@ -720,23 +729,23 @@ class Rules:
     
     
     
-    def rule1(self,opinion,useTaggedSentence):
+    def rule1(self,opinion,useProcessedSentence):
         
         "(\W|^){0}(\W|$)"
         
         """ Ex: não é uma pessoa honesta """
         
-        info = u'Regra \"não [VCOP] um/uma [NCLAS] [AJD+] ? Neg\"-> '        
-        regex = ur'(\W|^)não ({0}) (um|uma) ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.nclasRegex,self.adjsPosRegex)
+        info = u'Regra \"[NEG] [VCOP] um/uma [NCLAS] [AJD+] ? Neg\"-> '        
+        regex = ur'(\W|^)({0}) ({1}) (um|uma) ({2}) ({3})(\W|$)'.format(self.neg,self.vcop,self.nclas,self.adjsPosRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
         if sentence.find(u"um") == -1 or sentence.find(u"não") == -1:
             
-            return None
+            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -747,23 +756,23 @@ class Rules:
             return (-1,info) 
             
         else:
-            return None
+            return (0,'')
         
-    def rule2(self,opinion,useTaggedSentence):
+    def rule2(self,opinion,useProcessedSentence):
         
         """ Ex: não é um tipo autoritário """
         
-        info = u'Regra \"não [VCOP] um [NCLAS] [AJD-] ? Pos"\"-> '        
-        regex = ur'(\W|^)não ({0}) (um|uma) ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.nclasRegex,self.adjsNegRegex)
+        info = u'Regra \"[NEG] [VCOP] um [NCLAS] [AJD-] ? Pos"\"-> '        
+        regex = ur'(\W|^)({0}) ({1}) (um|uma) ({2}) ({3})(\W|$)'.format(self.neg,self.vcop,self.nclas,self.adjsNegRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
         if sentence.find(u"um") == -1 or sentence.find(u"não") == -1:
             
-            return None
+            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -774,23 +783,19 @@ class Rules:
             return (1,info) 
             
         else:
-            return None
+            return (0,'')
     
-    def rule3(self,opinion,useTaggedSentence):
+    def rule3(self,opinion,useProcessedSentence):
         
         """ Ex: não é um bom político """
         
-        info = u'Regra \"não [VCOP] um [AJD+] [NCLAS] ?Neg\""-> '        
-        regex = ur'(\W|^)não ({0}) (um|uma) ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.adjsPosRegex,self.nclasRegex)
+        info = u'Regra \"[NEG] [VCOP] um [AJD+] [NCLAS] ?Neg\""-> '        
+        regex = ur'(\W|^)({0}) ({1}) (um|uma) ({2}) ({3})(\W|$)'.format(self.neg,self.vcop,self.adjsPosRegex,self.nclas)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
-        
-        if sentence.find(u"um") == -1 or sentence.find(u"não") == -1:
-            
-            return None
          
         match = re.search(regex,sentence)
         
@@ -801,23 +806,23 @@ class Rules:
             return (-1,info) 
             
         else:
-            return None
+            return (0,'')
     
-    def rule4(self,opinion,useTaggedSentence):
+    def rule4(self,opinion,useProcessedSentence):
         
         """ Ex: não é um mau político """
         
-        info = u'Regra \"não [VCOP] um [AJD-] [NCLAS] ?Pos\""-> '        
-        regex = ur'(\W|^)não ({0}) (um|uma) ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.adjsNegRegex,self.nclasRegex)
+        info = u'Regra \"[NEG] [VCOP] um [AJD-] [NCLAS] ?Pos\""-> '        
+        regex = ur'(\W|^)({0}) ({1}) (um|uma) ({2}) ({3})(\W|$)'.format(self.neg,self.vcop,self.adjsNegRegex,self.nclas)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
         if sentence.find(u"um") == -1 or sentence.find(u"não") == -1:
             
-            return None
+            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -828,23 +833,23 @@ class Rules:
             return (1,info) 
             
         else:
-            return None
+            return (0,'')
     
-    def rule5(self,opinion,useTaggedSentence):
+    def rule5(self,opinion,useProcessedSentence):
         
         """ Ex: não é um idiota """
         
-        info = u'Regra \"não [VCOP] um [AJD-] ? Pos\""-> '        
-        regex = ur'(\W|^)não ({0}) (um|uma) ({1})(\W|$)'.format(self.vcopRegex,self.adjsNegRegex)
+        info = u'Regra \"[NEG] [VCOP] um [AJD-] ? Pos\""-> '        
+        regex = ur'(\W|^)({0}) ({1}) (um|uma) ({2})(\W|$)'.format(self.neg,self.vcop,self.adjsNegRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
         if sentence.find(u"um") == -1 or sentence.find(u"não") == -1:
             
-            return None
+            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -855,23 +860,23 @@ class Rules:
             return (1,info) 
             
         else:
-            return None
+            return (0,'')
     
-    def rule6(self,opinion,useTaggedSentence):
+    def rule6(self,opinion,useProcessedSentence):
         
         """ Ex: não é um embuste """
         
-        info = u'Regra \"não [VCOP] um [N-] ? Pos\""-> '        
-        regex = ur'(\W|^)não ({0}) (um|uma) ({1})(\W|$)'.format(self.vcopRegex,self.nounsNegRegex)
+        info = u'Regra \"[NEG] [VCOP] um [N-] ? Pos\""-> '        
+        regex = ur'(\W|^)({0}) ({1}) (um|uma) ({2})(\W|$)'.format(self.neg,self.vcop,self.nounsNegRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
         if sentence.find(u"um") == -1 or sentence.find(u"não") == -1:
             
-            return None
+            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -882,23 +887,23 @@ class Rules:
             return (1,info) 
             
         else:
-            return None
+            return (0,'')
     
-    def rule7(self,opinion,useTaggedSentence):
+    def rule7(self,opinion,useProcessedSentence):
         
         """ Ex: não foi nada sincero """
         
-        info = u'Regra \"não [VCOP] [QUANT] [Adj+] ? Neg\""-> '        
-        regex = ur'(\W|^)não ({0}) ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.quantRegex,self.adjsPosRegex)
+        info = u'Regra \"[NEG] [VCOP] [QUANT] [Adj+] ? Neg\""-> '        
+        regex = ur'(\W|^)({0}) ({1}) ({2}) ({3})(\W|$)'.format(self.neg,self.vcop,self.quant,self.adjsPosRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
         if sentence.find(u"não") == -1:
             
-            return None
+            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -909,23 +914,23 @@ class Rules:
             return (-1,info) 
             
         else:
-            return None
+            return (0,'')
     
-    def rule8(self,opinion,useTaggedSentence):
+    def rule8(self,opinion,useProcessedSentence):
         
         """ Ex: não é nada parvo """
         
-        info = u'Regra \"não [VCOP] [QUANT] [Adj-] ? Pos\""-> '        
-        regex = ur'(\W|^)não ({0}) ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.quantRegex,self.adjsNegRegex)
+        info = u'Regra \"[NEG] [VCOP] [QUANT] [Adj-] ? Pos\""-> '        
+        regex = ur'(\W|^)({0}) ({1}) ({2}) ({3})(\W|$)'.format(self.neg,self.vcop,self.quant,self.adjsNegRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
         if sentence.find(u"não") == -1:
             
-            return None
+            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -936,23 +941,23 @@ class Rules:
             return (1,info) 
             
         else:
-            return None
+            return (0,'')
     
-    def rule9(self,opinion,useTaggedSentence):
+    def rule9(self,opinion,useProcessedSentence):
         
         """ Ex: não foi coerente """
         
-        info = u'Regra \"não [VCOP] [Adj+] ? Neg\""-> '        
-        regex = ur'(\W|^)não ({0}) ({1})(\W|$)'.format(self.vcopRegex,self.adjsPosRegex)
+        info = u'Regra \"[NEG] [VCOP] [Adj+] ? Neg\""-> '        
+        regex = ur'(\W|^)({0}) ({1}) ({2})(\W|$)'.format(self.neg,self.vcop,self.adjsPosRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
         if sentence.find(u"não") == -1:
             
-            return None
+            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -963,23 +968,23 @@ class Rules:
             return (-1,info) 
             
         else:
-            return None
+            return (0,'')
         
-    def rule10(self,opinion,useTaggedSentence):
+    def rule10(self,opinion,useProcessedSentence):
         
         """ Ex: não é mentiroso """
         
-        info = u'Regra \"não [VCOP] [Adj-] ? Pos\""-> '        
-        regex = ur'(\W|^)não ({0}) ({1})(\W|$)'.format(self.vcopRegex,self.adjsNegRegex)
+        info = u'Regra \"[NEG] [VCOP] [Adj-] ? Pos\""-> '        
+        regex = ur'(\W|^)({0}) ({1}) ({2})(\W|$)'.format(self.neg,self.vcop,self.adjsNegRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
         if sentence.find(u"não") == -1:
             
-            return None
+            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -990,23 +995,23 @@ class Rules:
             return (1,info) 
             
         else:
-            return None
+            return (0,'')
     
-    def rule11(self,opinion,useTaggedSentence):
+    def rule11(self,opinion,useProcessedSentence):
         
         """ Ex: não demonstrou um forte empenho """
         
-        info = u'Regra \"não [VSUP] (um+uma) [ADJ+/0] [N+] ? Neg\""-> '        
-        regex = ur'(\W|^)não ({0}) (um|uma) ({1}|{2}) ({3})(\W|$)'.format(self.vsupRegex,self.adjsPosRegex,self.adjsNeutRegex,self.nounsPosRegex)
+        info = u'Regra \"[NEG] [VSUP] (um+uma) [ADJ+/0] [N+] ? Neg\""-> '        
+        regex = ur'(\W|^)({0}) ({1}) (um|uma) ({2}|{3}) ({4})(\W|$)'.format(self.neg,self.vsup,self.adjsPosRegex,self.adjsNeutRegex,self.nounsPosRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
         if sentence.find(u"um") == -1 and sentence.find(u"não") == -1:
             
-            return None
+            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -1017,23 +1022,23 @@ class Rules:
             return (-1,info) 
             
         else:
-            return None
+            return (0,'')
     
-    def rule12(self,opinion,useTaggedSentence):
+    def rule12(self,opinion,useProcessedSentence):
         
         """ Ex: não mostrou falta de coragem """
         
-        info = u'Regra \"não [VSUP] falta de [N+] ? Pos\""-> '        
-        regex = ur'(\W|^)não ({0}) falta de ({1})(\W|$)'.format(self.vsupRegex,self.nounsPosRegex)
+        info = u'Regra \"[NEG] [VSUP] falta de [N+] ? Pos\""-> '        
+        regex = ur'(\W|^)({0}) ({1}) falta de ({2})(\W|$)'.format(self.neg,self.vsup,self.nounsPosRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
         if sentence.find(u"falta") == -1:
             
-            return None
+            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -1044,23 +1049,23 @@ class Rules:
             return (1,info) 
             
         else:
-            return None
+            return (0,'')
     
-    def rule13(self,opinion,useTaggedSentence):
+    def rule13(self,opinion,useProcessedSentence):
         
         """ Ex:  é um político desonesto """
         
         info = u'Regra \"[VCOP] um [NCLAS] [AJD-] ? Neg\""-> '        
-        regex = ur'(\W|^)({0}) um ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.nclasRegex,self.adjsNegRegex)
+        regex = ur'(\W|^)({0}) um ({1}) ({2})(\W|$)'.format(self.vcop,self.nclas,self.adjsNegRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
         if sentence.find(u"um") == -1:
             
-            return None
+            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -1071,23 +1076,23 @@ class Rules:
             return (-1,info) 
             
         else:
-            return None
+            return (0,'')
     
-    def rule14(self,opinion,useTaggedSentence):
+    def rule14(self,opinion,useProcessedSentence):
         
         """ Ex:  é um tipo honesto """
         
         info = u'Regra \"[VCOP] um [NCLAS] [AJD+] ? Pos\""-> '        
-        regex = ur'(\W|^)({0}) um ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.nclasRegex,self.adjsPosRegex)
+        regex = ur'(\W|^)({0}) um ({1}) ({2})(\W|$)'.format(self.vcop,self.nclas,self.adjsPosRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
         if sentence.find(u"um") == -1:
             
-            return None
+            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -1098,23 +1103,23 @@ class Rules:
             return (1,info) 
             
         else:
-            return None
+            return (0,'')
     
-    def rule15(self,opinion,useTaggedSentence):
+    def rule15(self,opinion,useProcessedSentence):
         
         """ Ex:  é um mau político """
         
         info = u'Regra \"[VCOP] um [AJD-] [NCLAS] ?Neg\""-> '        
-        regex = ur'(\W|^)({0}) um ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.adjsNegRegex,self.nclasRegex)
+        regex = ur'(\W|^)({0}) um ({1}) ({2})(\W|$)'.format(self.vcop,self.adjsNegRegex,self.nclas)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
         if sentence.find(u"um") == -1:
             
-            return None
+            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -1125,23 +1130,23 @@ class Rules:
             return (-1,info) 
             
         else:
-            return None
+            return (0,'')
     
-    def rule16(self,opinion,useTaggedSentence):
+    def rule16(self,opinion,useProcessedSentence):
         
         """ Ex:  é um bom político """
         
         info = u'Regra \"[VCOP] um [AJD+] [NCLAS] ?Pos\""-> '        
-        regex = ur'(\W|^)({0}) um ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.adjsPosRegex,self.nclasRegex)
+        regex = ur'(\W|^)({0}) um ({1}) ({2})(\W|$)'.format(self.vcop,self.adjsPosRegex,self.nclas)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
         if sentence.find(u"um") == -1:
             
-            return None
+            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -1152,23 +1157,23 @@ class Rules:
             return (1,info) 
             
         else:
-            return None
+            return (0,'')
     
-    def rule17(self,opinion,useTaggedSentence):
+    def rule17(self,opinion,useProcessedSentence):
         
         """ Ex: é um perfeito idiota """
         
         info = u'Regra \"[VCOP] um [AJD+] [AJD-] ? Neg\""-> '        
-        regex = ur'(\W|^)({0}) um ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.adjsPosRegex,self.adjsNegRegex)
+        regex = ur'(\W|^)({0}) um ({1}) ({2})(\W|$)'.format(self.vcop,self.adjsPosRegex,self.adjsNegRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
         if sentence.find(u"um") == -1:
             
-            return None
+            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -1179,23 +1184,23 @@ class Rules:
             return (-1,info) 
             
         else:
-            return None
+            return (0,'')
     
-    def rule18(self,opinion,useTaggedSentence):
+    def rule18(self,opinion,useProcessedSentence):
         
         """ Ex: é um verdadeiro desastre """
         
         info = u'Regra \"[VCOP] um [AJD+] [N-] ? Neg\""-> '        
-        regex = ur'(\W|^)({0}) um ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.adjsPosRegex,self.nounsNegRegex)
+        regex = ur'(\W|^)({0}) um ({1}) ({2})(\W|$)'.format(self.vcop,self.adjsPosRegex,self.nounsNegRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
         if sentence.find(u"um") == -1:
             
-            return None
+            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -1206,23 +1211,23 @@ class Rules:
             return (-1,info) 
             
         else:
-            return None
+            return (0,'')
     
-    def rule19(self,opinion,useTaggedSentence):
+    def rule19(self,opinion,useProcessedSentence):
         
         """ Ex: é um mau perdedor """
         
         info = u'Regra \"[VCOP] um [AJD-] [AJD-] ? Neg\""-> '        
-        regex = ur'(\W|^)({0}) um ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.adjsNegRegex,self.adjsNegRegex)
+        regex = ur'(\W|^)({0}) um ({1}) ({2})(\W|$)'.format(self.vcop,self.adjsNegRegex,self.adjsNegRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
         if sentence.find(u"um") == -1:
             
-            return None
+            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -1233,23 +1238,23 @@ class Rules:
             return (-1,info) 
             
         else:
-            return None
+            return (0,'')
     
-    def rule20(self,opinion,useTaggedSentence):
+    def rule20(self,opinion,useProcessedSentence):
         
         """ Ex: é um idiota """
         
         info = u'Regra \"[VCOP] um [AJD-] ? Neg\""-> '        
-        regex = ur'(\W|^)({0}) um ({1})(\W|$)'.format(self.vcopRegex,self.adjsNegRegex)
+        regex = ur'(\W|^)({0}) um ({1})(\W|$)'.format(self.vcop,self.adjsNegRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
         if sentence.find(u"um") == -1:
             
-            return None
+            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -1260,23 +1265,23 @@ class Rules:
             return (-1,info) 
             
         else:
-            return None
+            return (0,'')
     
-    def rule21(self,opinion,useTaggedSentence):
+    def rule21(self,opinion,useProcessedSentence):
         
         """ Ex: é um embuste """
         
         info = u'Regra \"[VCOP] um [N-] ? Neg\""-> '        
-        regex = ur'(\W|^)({0}) um ({1})(\W|$)'.format(self.vcopRegex,self.nounsNegRegex)
+        regex = ur'(\W|^)({0}) um ({1})(\W|$)'.format(self.vcop,self.nounsNegRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
         if sentence.find(u"um") == -1:
             
-            return None
+            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -1287,16 +1292,16 @@ class Rules:
             return (-1,info) 
             
         else:
-            return None
+            return (0,'')
     
-    def rule22(self,opinion,useTaggedSentence):
+    def rule22(self,opinion,useProcessedSentence):
         
         """ Ex: é muito parvo """
         
         info = u'Regra \"[VCOP] [QUANT] [Adj-] ? Pos\""-> '        
-        regex = ur'(\W|^)({0}) ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.quantRegex,self.adjsNegRegex)
+        regex = ur'(\W|^)({0}) ({1}) ({2})(\W|$)'.format(self.vcop,self.quant,self.adjsNegRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
@@ -1310,16 +1315,16 @@ class Rules:
             return (-1,info) 
             
         else:
-            return None
+            return (0,'')
     
-    def rule23(self,opinion,useTaggedSentence):
+    def rule23(self,opinion,useProcessedSentence):
         
         """ Ex: foi extremamente sincero """
         
         info = u'Regra \"[VCOP] [QUANT] [Adj+] ? Pos\""-> '        
-        regex = ur'(\W|^)({0}) ({1}) ({2})(\W|$)'.format(self.vcopRegex,self.quantRegex,self.adjsPosRegex)
+        regex = ur'(\W|^)({0}) ({1}) ({2})(\W|$)'.format(self.vcop,self.quant,self.adjsPosRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
@@ -1333,16 +1338,16 @@ class Rules:
             return (1,info) 
             
         else:
-            return None    
+            return (0,'')    
     
-    def rule24(self,opinion,useTaggedSentence):
+    def rule24(self,opinion,useProcessedSentence):
         
         """ Ex: é mentiroso """
         
         info = u'Regra \"[VCOP] [Adj-] ? Neg\""-> '        
-        regex = ur'(\W|^)({0}) ({1})(\W|$)'.format(self.vcopRegex,self.adjsNegRegex)
+        regex = ur'(\W|^)({0}) ({1})(\W|$)'.format(self.vcop,self.adjsNegRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
@@ -1356,16 +1361,16 @@ class Rules:
             return (-1,info) 
             
         else:
-            return None
+            return (0,'')
     
-    def rule25(self,opinion,useTaggedSentence):
+    def rule25(self,opinion,useProcessedSentence):
         
         """ Ex: foi coerente """
         
         info = u'Regra \"[VCOP] [Adj+] ? Pos\""-> '        
-        regex = ur'(\W|^)({0}) ({1})(\W|$)'.format(self.vcopRegex,self.adjsPosRegex)
+        regex = ur'(\W|^)({0}) ({1})(\W|$)'.format(self.vcop,self.adjsPosRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
@@ -1379,9 +1384,9 @@ class Rules:
             return (1,info) 
             
         else:
-            return None        
+            return (0,'')        
     
-    def rule26(self,opinion,useTaggedSentence):
+    def rule26(self,opinion,useProcessedSentence):
         
         """ Ex: o idiota do Sócrates """
         
@@ -1390,14 +1395,14 @@ class Rules:
         info = u'Regra \"o [ADJ-] do TARGET ? Neg\""-> '        
         regex = ur'(\W|^)o ({0}) do {1}(\W|$)'.format(self.adjsNegRegex,target)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
         if sentence.find(u"do") == -1:
             
-            return None
+            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -1408,77 +1413,23 @@ class Rules:
             return (-1,info) 
             
         else:
-            return None  
-    
-    def rule27(self,opinion,useTaggedSentence):
+            return (0,'')  
         
-        """ Ex: revelou uma enorme falta de respeito """
-        
-        info = u'Regra \"[VSUP] (um+uma) [ADJ+/0] falta de [N+] ? Neg\""-> '        
-        regex = ur'(\W|^)({0}) (um|uma) ({1}|{2}) falta de ({3})(\W|$)'.format(self.vsupRegex,self.adjsPosRegex,self.adjsNeutRegex,self.nounsPosRegex)
-        
-        if useTaggedSentence:
-            sentence = opinion.processedSentence.lower()
-        else:
-            sentence = opinion.sentence.lower()
-        
-        if sentence.find(u"falta de") == -1:
-            
-            return None
-         
-        match = re.search(regex,sentence)
-        
-        if match != None:
-            
-            info += match.group() 
-            
-            return (-1,info) 
-            
-        else:
-            return None
-    
-    def rule28(self,opinion,useTaggedSentence):
-        
-        """ Ex: tem falta de coragem """
-        
-        info = u'Regra \"[VSUP] falta de [N+] ? Neg\""-> '        
-        regex = ur'(\W|^)({0}) falta de ({1})(\W|$)'.format(self.vsupRegex,self.nounsPosRegex)
-        
-        if useTaggedSentence:
-            sentence = opinion.processedSentence.lower()
-        else:
-            sentence = opinion.sentence.lower()
-        
-        if sentence.find(u"falta de") == -1:
-            
-            return None
-         
-        match = re.search(regex,sentence)
-        
-        if match != None:
-            
-            info += match.group() 
-            
-            return (-1,info) 
-            
-        else:
-            return None
-        
-    def rule29(self,opinion,useTaggedSentence):
+    def rule29(self,opinion,useProcessedSentence):
         
         """ Ex: demonstrou uma enorme arrogância """
         
         info = u'Regra \"[VSUP] (um+uma+0) [ADJ+/0] [N-] ? Neg\""-> '        
-        regex = ur'(\W|^)({0}) (um|uma) ({1}|{2}) ({3})(\W|$)'.format(self.vsupRegex,self.adjsPosRegex,self.adjsNeutRegex,self.nounsNegRegex)
+        regex = ur'(\W|^)({0}) (um|uma) ({1}|{2}) ({3})(\W|$)'.format(self.vsup,self.adjsPosRegex,self.adjsNeutRegex,self.nounsNegRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
         if sentence.find(u"um") == -1:
             
-            return None
+            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -1489,23 +1440,19 @@ class Rules:
             return (-1,info) 
             
         else:
-            return None
+            return (0,'')
     
-    def rule30(self,opinion,useTaggedSentence):
+    def rule30(self,opinion,useProcessedSentence):
         
-        """ Ex: demonstrou uma enorme coragem """
+        """ Ex: demonstrou (uma|0) alta coragem """
         
-        info = u'Regra \"[VSUP] (um+uma+0) [ADJ+/0] [N-] ? Neg\""-> '        
-        regex = ur'(\W|^)({0}) (um|uma) ({1}|{2}) ({3})(\W|$)'.format(self.vsupRegex,self.adjsPosRegex,self.adjsNeutRegex,self.nounsPosRegex)
+        info = u'Regra \"[VSUP] (um+uma+0) [ADJ+/0] [N+] ? Neg\""-> '        
+        regex = ur'(\W|^)({0}) ((um|uma) )?({1}|{2}) ({3})(\W|$)'.format(self.vsup,self.adjsPosRegex,self.adjsNeutRegex,self.nounsPosRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
-         
-        if sentence.find(u"um") == -1:
-            
-            return None
          
         match = re.search(regex,sentence)
         
@@ -1516,23 +1463,23 @@ class Rules:
             return (1,info) 
             
         else:
-            return None
+            return (0,'')
     
-    def rule31(self,opinion,useTaggedSentence):
+    def rule31(self,opinion,useProcessedSentence):
             
         """ Ex: não engana OU não agiu de má-fé """
         
-        info = u'Regra \"não\nunca [V-]\[IDIOM-] ? Pos\""-> '        
-        regex = ur'(\W|^)(não|nunca) ({0}|{1})(\W|$)'.format(self.idiomNegRegex,self.verbNegRegex)
+        info = u'Regra \"[NEG]\nunca [V-]\[IDIOM-] ? Pos\""-> '        
+        regex = ur'(\W|^)(({0})|nunca) ({1}|{2})(\W|$)'.format(self.neg,self.idiomNegRegex,self.verbNegRegex)
     
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
         if sentence.find(u"não") == -1 and sentence.find(u"nunca") == -1: 
             
-            return None
+            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -1543,23 +1490,23 @@ class Rules:
             return (1,info) 
             
         else:
-            return None
+            return (0,'')
 
-    def rule32(self,opinion,useTaggedSentence):
+    def rule32(self,opinion,useProcessedSentence):
         
         """ Ex: não está a mentir """
         
-        info = u'Regra \"não/nunca [VCOP] a [V-] ? Pos\""-> '        
-        regex = ur'(\W|^)(não|nunca) ({0}) a ({1})(\W|$)'.format(self.vcopRegex,self.verbNegRegex)
+        info = u'Regra \"[NEG]/nunca [VCOP] a [V-] ? Pos\""-> '        
+        regex = ur'(\W|^)(({0})|nunca) ({1}) a ({2})(\W|$)'.format(self.neg,self.vcop,self.verbNegRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
         if sentence.find(u"não") == -1 and sentence.find(u"nunca") == -1: 
             
-            return None
+            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -1570,25 +1517,25 @@ class Rules:
             return (1,info) 
             
         else:
-            return None
+            return (0,'')
 
 
 
-    def rule33(self,opinion,useTaggedSentence):
+    def rule33(self,opinion,useProcessedSentence):
         
         """ Ex: não brilhou OU não agiu da boa-fé """
         
-        info = u'Regra \"não/nunca [V+]/[IDIOM+] ? Neg\""-> '        
-        regex = ur'(\W|^)(não|nunca) ({0}|{1})(\W|$)'.format(self.verbPosRegex,self.idiomPosRegex)
+        info = u'Regra \"[NEG]/nunca [V+]/[IDIOM+] ? Neg\""-> '        
+        regex = ur'(\W|^)(({0})|nunca) ({1}|{2})(\W|$)'.format(self.neg,self.verbPosRegex,self.idiomPosRegex)
               
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
         if sentence.find(u"não") == -1 and sentence.find(u"nunca") == -1: 
             
-            return None
+            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -1599,24 +1546,24 @@ class Rules:
             return (-1,info) 
             
         else:
-            return None
+            return (0,'')
 
 
-    def rule34(self,opinion,useTaggedSentence):
+    def rule34(self,opinion,useProcessedSentence):
         
         """ Ex: não se atrapalhou OU não se espetou ao comprido """
         
-        info = u'Regra \"não/nunca se [V-]/[IDIOM-] ? Pos\""-> '        
-        regex = ur'(\W|^)(não|nunca) se ({0}|{1})(\W|$)'.format(self.verbNegRegex,self.idiomNegRegex)
+        info = u'Regra \"[NEG]/nunca se [V-]/[IDIOM-] ? Pos\""-> '        
+        regex = ur'(\W|^)(({0})|nunca) se ({1}|{2})(\W|$)'.format(self.neg,self.verbNegRegex,self.idiomNegRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
         if sentence.find(u"não") == -1 and sentence.find(u"nunca") == -1: 
             
-            return None
+            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -1627,24 +1574,24 @@ class Rules:
             return (1,info) 
             
         else:
-            return None
+            return (0,'')
 
 
-    def rule35(self,opinion,useTaggedSentence):
+    def rule35(self,opinion,useProcessedSentence):
         
         """ Ex: não|nunca se sacrificar OU não se saiu bem"""
         
-        info = u'Regra \"não/nunca se [V+]/[IDIOM+] ? Neg\""-> '        
-        regex = ur'(\W|^)(não|nunca) se ({0}|{1})(\W|$)'.format(self.verbPosRegex,self.idiomPosRegex)
+        info = u'Regra \"[NEG]/nunca se [V+]/[IDIOM+] ? Neg\""-> '        
+        regex = ur'(\W|^)(({0})|nunca) se ({1}|{2})(\W|$)'.format(self.neg,self.verbPosRegex,self.idiomPosRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
         if sentence.find(u"não") == -1 and sentence.find(u"nunca") == -1: 
             
-            return None
+            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -1655,24 +1602,23 @@ class Rules:
             return (-1,info) 
             
         else:
-            return None
+            return (0,'')
 
-    #--------------#
-    def rule37(self,opinion,useTaggedSentence):
+    def rule37(self,opinion,useProcessedSentence):
         
         """ Ex: não ter (muita|0) contestação """
         
-        info = u'Regra \"não [VSUP] [QUANT/0] [N-] ? Pos\""-> '
-        regex = ur'(\W|^)não ({0}) (({1}) )?({2})(\W|$)'.format(self.vsupRegex,self.quantRegex,self.nounsNegRegex)
+        info = u'Regra \"[NEG] [VSUP] [QUANT/0] [N-] ? Pos\""-> '
+        regex = ur'(\W|^)({0}) ({1}) (({2}) )?({3})(\W|$)'.format(self.neg,self.vsup,self.quant,self.nounsNegRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
         if sentence.find(u"não") == -1: 
             
-            return None
+            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -1683,24 +1629,24 @@ class Rules:
             return (1,info) 
             
         else:
-            return None        
+            return (0,'')        
    
 
-    def rule38(self,opinion,useTaggedSentence):
+    def rule38(self,opinion,useProcessedSentence):
         
         """ Ex: não ter (muito|0) talento """
         
-        info = u'Regra \"não [VSUP] [QUANT/0] [N+] ? Neg\""-> '
-        regex = ur'(\W|^)não ({0}) (({1}) )?({2})(\W|$)'.format(self.vsupRegex,self.quantRegex,self.nounsPosRegex)
+        info = u'Regra \"[NEG] [VSUP] [QUANT/0] [N+] ? Neg\""-> '
+        regex = ur'(\W|^)({0}) ({1}) (({2}) )?({3})(\W|$)'.format(self.neg,self.vsup,self.quant,self.nounsPosRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
         if sentence.find(u"não") == -1: 
             
-            return None
+            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -1711,17 +1657,17 @@ class Rules:
             return (-1,info) 
             
         else:
-            return None       
+            return (0,'')       
 
 
-    def rule39(self,opinion,useTaggedSentence):
+    def rule39(self,opinion,useProcessedSentence):
         
         """ Ex: ter (muita|0) coragem"""
         
         info = u'Regra \"[VSUP] [QUANT/0] [N+] ? Pos\""-> ' 
-        regex = ur'(\W|^)({0}) (({1}) )?({2})(\W|$)'.format(self.vsupRegex,self.quantRegex,self.nounsPosRegex)
+        regex = ur'(\W|^)({0}) (({1}) )?({2})(\W|$)'.format(self.vsup,self.quant,self.nounsPosRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
@@ -1735,17 +1681,17 @@ class Rules:
             return (1,info) 
             
         else:
-            return None 
+            return (0,'') 
       
 
-    def rule40(self,opinion,useTaggedSentence):
+    def rule40(self,opinion,useProcessedSentence):
         
         """ Ex: ter (muito|0) medo"""
         
         info = u'Regra \"[VSUP] [QUANT/0] [N-] ? Neg\""-> '
-        regex = ur'(\W|^)({0}) (({1}) )?({2})(\W|$)'.format(self.vsupRegex,self.quantRegex,self.nounsNegRegex)
+        regex = ur'(\W|^)({0}) (({1}) )?({2})(\W|$)'.format(self.vsup,self.quant,self.nounsNegRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
@@ -1759,24 +1705,24 @@ class Rules:
             return (-1,info) 
             
         else:
-            return None        
+            return (0,'')        
 
 
-    def rule41(self,opinion,useTaggedSentence):
+    def rule41(self,opinion,useProcessedSentence):
         
-        """ Ex: falta de coragem"""
+        """ Ex: excesso/falta de coragem"""
         
         info = u'Regra \"falta de [N+] ? Neg\""-> ' 
-        regex = ur'(\W|^)falta de ({0})(\W|$)'.format(self.nounsPosRegex)
+        regex = ur'(\W|^)(falta|excesso) de ({0})(\W|$)'.format(self.nounsPosRegex)
         
-        if useTaggedSentence:
+        if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
         
-        if sentence.find(u"falta de") == -1: 
+        if sentence.find(u"falta") == -1 and sentence.find(u"excesso") == -1: 
             
-            return None
+            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -1787,12 +1733,12 @@ class Rules:
             return (-1,info) 
             
         else:
-            return None  
+            return (0,'')  
 
                 
     setOfRules = [hasNickName,hasInterjectionWithTarget,hasInterjection,hasLol,hasHehe,hasHeavyPunctuation,
-                  hasSmiley,hasQuotedSentiment,rule27,rule4,rule3,rule2,rule1,rule12,rule11,rule14,rule5,rule13,rule16,rule15,
-                  rule17,rule18,rule19,rule6,rule8,rule7,rule30,rule29,rule28,rule37,rule38,rule39,rule40,        
+                  hasSmiley,hasQuotedSentiment,rule4,rule3,rule2,rule1,rule12,rule11,rule14,rule5,rule13,rule16,rule15,
+                  rule17,rule18,rule19,rule6,rule8,rule7,rule30,rule29,rule37,rule38,rule39,rule40,        
                   rule10,rule9,rule20,rule21,rule23,rule22,rule25,rule24,rule26,rule32,rule31,rule34,rule35,rule33, rule41]                    
     
 def testInterjectionTarget():
@@ -2092,77 +2038,117 @@ def testHeavyPunct():
 
 def testSintaticRules():
     
-    sentenceNoMatch = u"O sócrates e passos coelho são bff"
-    
-    s1 = [sentenceNoMatch,u" o sócrates não é uma pessoa honesta ",u"o sócrates não é uma pessoa honesta"]
-    s2 = [sentenceNoMatch,u" o sócrates não é um tipo autoritário ",u"o sócrates não é um tipo autoritário"]
-    s3 = [sentenceNoMatch,u" o sócrates não é um bom político "]
-    s4 = [sentenceNoMatch,u" o sócrates não é um mau político "]
-    s5 = [sentenceNoMatch,u" o sócrates não é um idiota "]
-    s6 = [sentenceNoMatch,u" o sócrates não é um embuste "] 
-    s7 = [sentenceNoMatch,u" o sócrates não foi nada sincero "]
-    s8 = [sentenceNoMatch,u" o sócrates não é nada parvo "]
-    s9 = [sentenceNoMatch,u" o sócrates não foi coerente "]
-    s10 = [sentenceNoMatch,u" o sócrates não é mentiroso "]
-    s11 = [sentenceNoMatch,u" o sócrates não demonstrou um forte empenho "]
-    s12 = [sentenceNoMatch,u" o sócrates não mostrou falta de coragem "]
-    s13 = [sentenceNoMatch,u" o sócrates é um político desonesto "]
-    s14 = [sentenceNoMatch,u" o sócrates é um tipo honesto "]
-    s15 = [sentenceNoMatch,u" o sócrates é um mau político "]
-    s16 = [sentenceNoMatch,u" o sócrates é um bom político "]
-    s17 = [sentenceNoMatch,u" o sócrates é um perfeito idiota "]
-    s18 = [sentenceNoMatch,u" o sócrates é um verdadeiro desastre "]
-    s19 = [sentenceNoMatch,u" o sócrates é um mau perdedor "]
-    s20 = [sentenceNoMatch,u" o sócrates é um idiota "]
-    s21 = [sentenceNoMatch,u" o sócrates é um embuste "]
-    s22 = [sentenceNoMatch,u" o sócrates é muito parvo "]
-    s23 = [sentenceNoMatch,u" o sócrates foi extremamente sincero "]
-    s24 = [sentenceNoMatch,u" o sócrates é mentiroso "]
-    s25 = [sentenceNoMatch,u" o sócrates foi coerente "]
-    s26 = [sentenceNoMatch,u" o idiota do sócrates "]
-    s27 = [sentenceNoMatch,u" o sócrates revelou uma enorme falta de respeito "]
-    s28 = [sentenceNoMatch,u" o sócrates tem falta de coragem "]
-    s29 = [sentenceNoMatch,u" o sócrates demonstrou uma enorme arrogância "]
-    s30 = [sentenceNoMatch,u" o sócrates demonstrou uma enorme coragem "]
-    
-    s31 = [sentenceNoMatch,u" o sócrates não engana ",u" o sócrates não agiu de má-fé " ]
-    s32 = [sentenceNoMatch,u" o sócrates não está a papaguear "]
-    s33 = [sentenceNoMatch,u" o sócrates não brilhou ",u" o     sócrates não agiu de boa-fé "]
-    s34 = [sentenceNoMatch,u" o sócrates não se atrapalhou ",u" o sócrates não espetou-se ao comprido "]
-    s35 = [sentenceNoMatch,u" o sócrates não se sacrificou ",u" o sócrates não se saiu bem "]
-    s37 = [sentenceNoMatch,u" o sócrates não tem muita susceptibilidade ",u" o sócrates não tem susceptibilidade "]
-    s38 = [sentenceNoMatch,u" o sócrates não tem muito talento ",u" o sócrates não tem talento "]
-    s39 = [sentenceNoMatch,u" o sócrates não tem muita coragem ",u" o sócrates não tem coragem "]    
-    s40 = [sentenceNoMatch,u" o sócrates tem muito medo ",u" o sócrates tem medo "]
-    s41 = [sentenceNoMatch,u" o sócrates tem falta de coragem ",u" o sócrates tem falta de alegria "]
-    
     ruler = getTestRuler()
+    
+    sentenceNoMatch = u"O sócrates e passos coelho são bff"    
+    
+    s1 = [ruler.rule1,[sentenceNoMatch,0],[u" o sócrates não é uma pessoa honesta ",-1],[u"o sócrates não é uma pessoa honesta",-1]]
+    s2 = [ruler.rule2,[sentenceNoMatch,0],[u" o sócrates não é um tipo autoritário ",1],[u"o sócrates não é um tipo autoritário",1]]
+    s3 = [ruler.rule3,[sentenceNoMatch,0],[u" o sócrates não é um bom político ",-1]]
+    s4 = [ruler.rule4,[sentenceNoMatch,0],[u" o sócrates não é um mau político ",1]]
+    s5 = [ruler.rule5,[sentenceNoMatch,0],[u" o sócrates não é um idiota ",1]]
+    s6 = [ruler.rule6,[sentenceNoMatch,0],[u" o sócrates não é um embuste ",1]] 
+    s7 = [ruler.rule7,[sentenceNoMatch,0],[u" o sócrates não foi nada sincero ",-1]]
+    s8 = [ruler.rule8,[sentenceNoMatch,0],[u" o sócrates não é nada parvo ",1]]
+    s9 = [ruler.rule9,[sentenceNoMatch,0],[u" o sócrates não foi coerente ",-1]]
+    s10 = [ruler.rule10,[sentenceNoMatch,0],[u" o sócrates não é mentiroso ",1]]
+    s11 = [ruler.rule11,[sentenceNoMatch,0],[u" o sócrates não demonstrou um forte empenho ",-1]]
+    s12 = [ruler.rule12,[sentenceNoMatch,0],[u" o sócrates não mostrou falta de coragem ",1]]
+    s13 = [ruler.rule13,[sentenceNoMatch,0],[u" o sócrates é um político desonesto ",-1]]
+    s14 = [ruler.rule14,[sentenceNoMatch,0],[u" o sócrates é um tipo honesto ",1]]
+    s15 = [ruler.rule15,[sentenceNoMatch,0],[u" o sócrates é um mau político ",-1]]
+    s16 = [ruler.rule16,[sentenceNoMatch,0],[u" o sócrates é um bom político ",1]]
+    s17 = [ruler.rule17,[sentenceNoMatch,0],[u" o sócrates é um perfeito idiota ",-1]]
+    s18 = [ruler.rule18,[sentenceNoMatch,0],[u" o sócrates é um verdadeiro desastre ",-1]]
+    s19 = [ruler.rule19,[sentenceNoMatch,0],[u" o sócrates é um mau perdedor ",-1]]
+    s20 = [ruler.rule20,[sentenceNoMatch,0],[u" o sócrates é um idiota ",-1]]
+    s21 = [ruler.rule21,[sentenceNoMatch,0],[u" o sócrates é um embuste ",-1]]
+    s22 = [ruler.rule22,[sentenceNoMatch,0],[u" o sócrates é muito parvo ",-1]]
+    s23 = [ruler.rule23,[sentenceNoMatch,0],[u" o sócrates foi extremamente sincero ",1]]
+    s24 = [ruler.rule24,[sentenceNoMatch,0],[u" o sócrates é mentiroso ",-1]]
+    s25 = [ruler.rule25,[sentenceNoMatch,0],[u" o sócrates foi coerente ",1]]
+    s26 = [ruler.rule26,[sentenceNoMatch,0],[u" o idiota do sócrates ",-1]]
+    #s27 = [ruler.rule27,[sentenceNoMatch,0],[u" o sócrates revelou uma enorme falta de respeito ",-1]]
+    #s28 = [ruler.rule28,[sentenceNoMatch,0],[u" o sócrates tem falta de coragem ",-1]]
+    s29 = [ruler.rule29,[sentenceNoMatch,0],[u" o sócrates demonstrou uma enorme arrogância ",-1]]
+    s30 = [ruler.rule30,[sentenceNoMatch,0],[u" o sócrates demonstrou uma alta coragem ",1],[u" o sócrates demonstrou alta coragem ",1],[u" o sócrates demonstrou um alto empenho ",1]]    
+    s31 = [ruler.rule31,[sentenceNoMatch,0],[u" o sócrates não engana ",1],[u" o sócrates não agiu de má-fé ",1]]
+    s32 = [ruler.rule32,[sentenceNoMatch,0],[u" o sócrates não está a papaguear ",1]]
+    s33 = [ruler.rule33,[sentenceNoMatch,0],[u" o sócrates não brilhou ",-1],[u" o sócrates não agiu de boa-fé ",-1]]
+    s34 = [ruler.rule34,[sentenceNoMatch,0],[u" o sócrates não se atrapalhou ",1],[u" o sócrates não espetou-se ao comprido ",1]]
+    s35 = [ruler.rule35,[sentenceNoMatch,0],[u" o sócrates não se sacrificou ",-1],[u" o sócrates não saiu-se bem ",-1]]
+    s37 = [ruler.rule37,[sentenceNoMatch,0],[u" o sócrates não tem muita susceptibilidade ",1],[u" o sócrates não tem susceptibilidade ",1]]
+    s38 = [ruler.rule38,[sentenceNoMatch,0],[u" o sócrates não tem muito talento ",-1],[u" o sócrates não tem talento ",-1]]
+    s39 = [ruler.rule39,[sentenceNoMatch,0],[u" o sócrates tem muita coragem ",1],[u" o sócrates tem coragem ",1]]   
+    s40 = [ruler.rule40,[sentenceNoMatch,0],[u" o sócrates tem muito medo ",-1],[u" o sócrates tem medo ",-1]]
+    s41 = [ruler.rule41,[sentenceNoMatch,0],[u" o sócrates tem falta de coragem ",-1],[u" o sócrates tem falta de alegria ",-1],[u" o sócrates tem excesso de confiança ",-1]]
+    
+    testCases = [s30]
+    
+    testCases = [s1,
+             s2,
+             s3,
+             s4,
+             s5,
+             s6,
+             s7,
+             s8,
+             s9,
+             s10,
+             s11,
+             s12,
+             s13,
+             s14,
+             s15,
+             s16,
+             s17,
+             s18,
+             s19,
+             s20,
+             s21,
+             s22,
+             s23,
+             s24,
+             s25,
+             s26,
+             s29,
+             s30,
+             s31,
+             s32,
+             s33,
+             s34,
+             s35,
+             s37,
+             s38,
+             s39,
+             s40,
+             s41]
+    
+    failures = []
+    
+    for test in testCases:
         
-    testCases =[s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11,s12,s13,s14,s15,s16,s17,s18,s19,s20,s21,s22,s23,s24,s25,s26,s27,s28,s29,s30,s31,s32,s33,s34,s35,s37,s38,s39,s40,s41]
-    rules = [ruler.rule1,ruler.rule2,ruler.rule3,ruler.rule4,ruler.rule5,ruler.rule6,ruler.rule7,ruler.rule8,ruler.rule9,ruler.rule10,ruler.rule11,ruler.rule12,ruler.rule13,ruler.rule14,ruler.rule15,ruler.rule16,ruler.rule17,ruler.rule18,ruler.rule19,ruler.rule20,ruler.rule21,ruler.rule22,ruler.rule23,ruler.rule24,ruler.rule25,ruler.rule26,ruler.rule27,ruler.rule28,ruler.rule29,ruler.rule30,ruler.rule31,ruler.rule32,ruler.rule33,ruler.rule34,ruler.rule35,ruler.rule37,ruler.rule38,ruler.rule39,ruler.rule40,ruler.rule41]
-    
-    
-    #mw = getMultiWordsHandler()    
-    i=0
-    
-    while i < len(testCases):
+        rule = test[0]
         
-        print "REGRA ", rules[i]
-        
-        for sentence in testCases[i]:
-    
-            o = Opinion(1,sentence,u"socrates",u"sócrates",0,None,u"Manual",u"Manual",None)
-            #o.processedSentence = mw.tokenizeMultiWords(sentence)
-            #print "tagged: ", o.processedSentence
-            #v = ruler.rule33(o,False)
+        for t in test[1:]:
             
-            v = rules[i](o,False)
+            o = Opinion(1,t[0],u"socrates",u"sócrates",0,None,u"Manual",u"Manual",None)
+            res = rule(o,False)
             
-            print sentence, "->", v 
-            print "------------------"
+            if res[0] != t[1]:
+                failures.append((rule,unicode(t[0]),t[1],res[0]))
+    
+    
+    if len(failures) > 0:
         
-        print "\n\n"
-        i+=1
+        print str(len(failures))," errors\n"
+        
+        for ff in failures:
+            print ff[0]," :: ", ff[1]
+            print "expect:", str(ff[2])," got:", str(ff[3])
+            print "\n--------------------\n"
+    else:
+        print "All ok!"
     
 def getTestRuler():
 
@@ -2214,4 +2200,3 @@ if __name__ == '__main__':
     testSintaticRules()
     
     print "Done!"
-   
