@@ -12,6 +12,7 @@ import SentiTokens
 import codecs
 import StringIO
 import contextRestrictions
+import Preprocessor
 from Opinion import Opinion
 
 class Naive:
@@ -46,9 +47,7 @@ class Naive:
                     
 
         self.targetsRegex = buff.getvalue().strip('|')
-        
-        print self.targetsRegex 
-        
+                
         buff = StringIO.StringIO()
                  
         # Build a regex for identifying sentiment tokens
@@ -136,7 +135,68 @@ class Naive:
             else:
                 
                 return None
-                     
+
+    def inferTarget2(self,opinion):
+        
+        """ 
+            Tries to identify mentions of the targets in a message
+            Params: opinion -> Opinion object
+            Returns: tuple(inferred target, algorithm metadata)
+        """
+       
+        info = u"Targets: "
+        specialChars = u' “”\"@)(!#;&:\\@/-_,?.«»\'~ ' 
+        sentence = Preprocessor.separateSpecialSymbols(opinion.sentence.lower()) 
+        print sentence
+        
+        matches = []
+        
+        for person in self.persons:            
+            
+            for name in person.names:
+                                   
+                if sentence.find(" "+name+" ") != -1:
+                    
+                    matches.append(name)
+            
+            for nickName in person.nicknames:
+                    
+                if sentence.find(" "+nickName+" ") != -1:
+                    
+                    matches.append(nickName)
+                    
+            for ergo in person.ergos:
+                
+                if sentence.find(" "+ergo+" ") != -1:
+                    
+                    matches.append(ergo)                
+            
+        targets = {}
+        
+        for mention in matches:
+            
+            target = self.getTargetByMention(mention)
+            
+            if target != None and not self.isFalsePositive(mention, sentence):                    
+                
+                if mention not in info:
+                    info += mention + ","
+                    
+                targets[target] = mention
+        
+        if len(targets) > 0:
+            
+            results = []
+            info = info.strip(',')
+        
+            for target,mention in targets.items():
+                
+                results.append(opinion.clone(target=target,mention=mention,metadata=info))
+             
+            return results
+        else:
+            
+            return None                     
                 
     def getTargetByMention(self,mention):       
         
@@ -527,9 +587,9 @@ class Rules:
 
             result = rule(self,opinion,useProcessedSentence)
             
-            if result != None:
+            if result[0] != 0:
              
-                info = opinion.metadata + ";" + result[1]
+                info = opinion.metadata + ">>" + result[1]
                 return opinion.clone(polarity=result[0],metadata=info)
         
         return opinion.clone(polarity=0)
@@ -550,29 +610,86 @@ class Rules:
                 
         return featureSet
     
-    def hasNickName(self,opinion,useProcessedSentence):
+    def genConditionalFeatureSet(self,opinion,useProcessedSentence):
         
-        info = "Nickname: "
+        featureSet = []
         
-        mention = opinion.mention.lower()
-        
-        try:
-            person = self.persons[mention]
+        for rules in self.clusterOfRules:
             
-            if person.isNickname(mention):
+            match = False
+            
+            for rule in rules:
                 
-                info += mention
-                return (-1,info)
-            else:
-                return None
-        except KeyError:
-            
-            return None
+                if not match:
+                    result = rule(self,opinion,useProcessedSentence)
+                
+                    if result[0] != 0:
+                        match = True
+                        featureSet.append(result[0])
+                    else:
+                        featureSet.append(0)
+                else:
+                    print "rule already matched...", rule
+                    featureSet.append(0)
+                    
+        return featureSet
     
-    def hasLol(self,opinion,useProcessedSentence):
+    def hasPosInterjection(self,opinion,useProcessedSentence):         
+                         
+        info = "Positive Interjection: "        
+
+        regex = ur'(\W|^)(g+o+l+o+|f+o+r[cç]+a+|b+r+a+v+o+|b+o+a+|l+i+n+d+o+|f+i+x+e+|m(ui)?to+ b[eo]+m+|co+ra+ge+m|v+i+v+a+|v+a+i+|v+a+m+o+s+( l[aá]+)?|bo+ra+ l[aá]+|e+spe+t[aá]+cu+lo+|u+a+u+|y+e+s+|l+o+v+e+|l+i+k+e+|n+i+c+e+|g+o+a+l+|t+h+a+n+k+s+|o+b+r+i+g+a+d+o+|sco+re+d?)!+(\W|$)'        
+               
+        if useProcessedSentence:
+            sentence = opinion.processedSentence.lower()
+        else:
+            sentence = opinion.sentence.lower()
         
-        info = "LOL: "        
-        regex = r'(\W|^)(l+o+l+(o+)?)+(\W|$)'
+        if sentence.find(u"!") == -1: 
+            
+            return (0,'')
+        
+        match = re.search(regex,sentence)
+    
+        if match != None:
+            
+            info += match.group()
+            
+            return (1,info) 
+            
+        else:
+            return (0,'')
+
+    def hasNegInterjection(self,opinion,useProcessedSentence):         
+                         
+        info = "Positive Interjection: "        
+        regex = ur'(\W|^)(j[aá]+ fo+mo+s|que+ ma+u+|fo+sga-se|j[áa]+ che+ga+|so+co+rro+|u+i+|a+i+|o+h+|i+rr+a+|a+pre+|ra+i+o+s|mandem-no embora|sa+i da+[íi]+|tirem-no da[ií]|da+ss+|fo+ra+|m+e+r+d+a+|f+o+d+a+-*s+e*|(es)?t[áa] fdd|que no+jo+|cre+do+|(oh)?meu deus|u+i+|li+vra+|va+i+ a+ba+i+xo+|fo+ra+|(pa+ra+ a )?ru+a+|sa+fa+|cru+ze+s|pa+sso+u+-se|ba+sta+|fo+go+|esta+mo+s fe+i+to+s) ?!+(\W|$)'
+                
+        if useProcessedSentence:
+            sentence = opinion.processedSentence.lower()
+        else:
+            sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"!") == -1: 
+            
+            return (0,'')
+        
+        match = re.search(regex,sentence)
+    
+        if match != None:
+            
+            info += match.group()
+            
+            return (-1,info) 
+            
+        else:
+            return (0,'')
+        
+   
+    def hasPosSmiley(self,opinion,useProcessedSentence): 
+        
+        info = "Smiley: "        
+        regex = ur'(\W|^)[\=:x8]-?[\)d\]]+(\W|$)'
         
         if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
@@ -583,16 +700,16 @@ class Rules:
     
         if match != None:
             
-            info += match.group()
+            info += match.group().upper()
             
-            return (-1,info)
+            return (1,info)            
         else:
-            return None
+            return (0,'') 
    
-    def hasSmiley(self,opinion,useProcessedSentence): 
+    def hasNegSmiley(self,opinion,useProcessedSentence): 
         
         info = "Smiley: "        
-        regex = r'(\W|^)([\W ])[:;xX8]-?([\)\(psd])+.?'
+        regex = ur'(\W|^)[\=:x8]-?[\[\(s]+(\W|$)'
         
         if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
@@ -607,12 +724,12 @@ class Rules:
             
             return (-1,info)            
         else:
-            return None
-       
-    def hasHehe(self,opinion,useProcessedSentence): 
+            return (0,'')
+         
+    def hasNegIdiomExpression(self,opinion,useProcessedSentence): 
         
-        info = "Haha: "        
-        regex = r'(\W|^)(h[e|a|i]+){2,}|(h[e|a|i] ?){2,}|([a|e]h ?){2,}(\W|$)'
+        info = "[IDIOM-]"        
+        regex = ur'(\W|^)({0})(\W|$)'.format(self.idiomNegRegex)
         
         if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
@@ -623,17 +740,36 @@ class Rules:
     
         if match != None:
             
-            info += match.group()
-                        
-            return (-1,info)    
+            info += match.group().upper()
             
+            return (-1,info)            
         else:
-            return None
+            return (0,'')  
+        
+    def hasPosIdiomExpression(self,opinion,useProcessedSentence): 
+        
+        info = "[IDIOM+]"        
+        regex = ur'(\W|^)({0})(\W|$)'.format(self.idiomPosRegex)
+        
+        if useProcessedSentence:
+            sentence = opinion.processedSentence.lower()
+        else:
+            sentence = opinion.sentence.lower()
+        
+        match = re.search(regex,sentence)
     
+        if match != None:
+            
+            info += match.group().upper()
+            
+            return (1,info)            
+        else:
+            return (0,'')
+            
     def hasQuotedSentiment(self,opinion,useProcessedSentence): 
         
         info = "Quoted sentiment: "        
-        regex = ur'(\W|^)\".*({0}|{1}).*\"(\W|$)'.format(self.adjsPosRegex,self.nounsPosRegex)
+        regex = ur'(\W|^)\"\W?({0}|{1})\W\?"(\W|$)'.format(self.adjsPosRegex,self.nounsPosRegex)
         
         if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
@@ -649,12 +785,12 @@ class Rules:
             return (-1,info)    
             
         else:
-            return None
+            return (0,'')
         
     def hasHeavyPunctuation(self,opinion,useProcessedSentence): 
         
         info = "Heavy Punctuation: "        
-        regex = r'(\W|^)([!?]{2,})+.?'
+        regex = r'(\W|^)(!+\?+)|(\?+!+)(\W|$)'
         
         if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
@@ -670,68 +806,9 @@ class Rules:
             return (-1,info)        
             
         else:
-            return None
-        
-    def hasInterjection(self,opinion,useProcessedSentence):
-                
-        info = "Interjection: "        
-        regex = ur'(\W|^)(m+e+r+d+a+|f+o+d+a+-*s+e*|(es)?t[áa] fdd|que no+jo+|cre+do+|li+ndo+|(oh)?meu deus|u+i+|li+vra+|a+ba+i+xo+!|fo+ra+!|ru+a+!|safa!|cruzes!|passou-se!|basta!|fo+go+!|estamos feitos)!*(\W|$)'        
-               
-        if useProcessedSentence:
-            sentence = opinion.processedSentence.lower()
-        else:
-            sentence = opinion.sentence.lower()
-        
-        match = re.search(regex,sentence)
-    
-        if match != None:
-            
-            info += match.group()
-            
-            return (-1,info) 
-            
-        else:
-            return None
-    
-    def hasInterjectionWithTarget(self,opinion,useProcessedSentence): 
-        
-        info = u"Interjection with target: "        
-        target = opinion.mention.lower()
-        regexTargetLeft = ur'(\W|^){0} (nunca mais|jamais)(\W|$)'.format(target)
-        regexTargetRight = ur'(\W|^)(oh|obrigado|senhor|anti-|este|esse){0}(\W|$)'.format(target)
-        
-        if useProcessedSentence:
-            sentence = opinion.processedSentence.lower()
-        else:
-            sentence = opinion.sentence.lower()
-    
-        match = re.search(regexTargetLeft,sentence)
-    
-        if match != None:
-            
-            info += match.group()
-            
-            return (-1,info)
-        else:
-            match = re.match(regexTargetRight,sentence)           
-            
-            if match != None:
-                
-                for g in match.groups():
-                    
-                    info += g + ","
-                
-                info = info.strip(',')
-                
-                return (-1,info)
-            else:
-                return None
-    
-    
+            return (0,'')
     
     def rule1(self,opinion,useProcessedSentence):
-        
-        "(\W|^){0}(\W|$)"
         
         """ Ex: não é uma pessoa honesta """
         
@@ -743,7 +820,7 @@ class Rules:
         else:
             sentence = opinion.sentence.lower()
         
-        if sentence.find(u"um") == -1 or sentence.find(u"não") == -1:
+        if sentence.find(u"um") == -1:
             
             return (0,'')
          
@@ -770,7 +847,7 @@ class Rules:
         else:
             sentence = opinion.sentence.lower()
         
-        if sentence.find(u"um") == -1 or sentence.find(u"não") == -1:
+        if sentence.find(u"um") == -1:
             
             return (0,'')
          
@@ -796,6 +873,10 @@ class Rules:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"um") == -1:
+            
+            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -820,7 +901,7 @@ class Rules:
         else:
             sentence = opinion.sentence.lower()
         
-        if sentence.find(u"um") == -1 or sentence.find(u"não") == -1:
+        if sentence.find(u"um") == -1:
             
             return (0,'')
          
@@ -847,7 +928,7 @@ class Rules:
         else:
             sentence = opinion.sentence.lower()
         
-        if sentence.find(u"um") == -1 or sentence.find(u"não") == -1:
+        if sentence.find(u"um") == -1:
             
             return (0,'')
          
@@ -874,7 +955,7 @@ class Rules:
         else:
             sentence = opinion.sentence.lower()
         
-        if sentence.find(u"um") == -1 or sentence.find(u"não") == -1:
+        if sentence.find(u"um") == -1:
             
             return (0,'')
          
@@ -900,10 +981,6 @@ class Rules:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
-        
-        if sentence.find(u"não") == -1:
-            
-            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -928,10 +1005,6 @@ class Rules:
         else:
             sentence = opinion.sentence.lower()
         
-        if sentence.find(u"não") == -1:
-            
-            return (0,'')
-         
         match = re.search(regex,sentence)
         
         if match != None:
@@ -954,10 +1027,6 @@ class Rules:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
-        
-        if sentence.find(u"não") == -1:
-            
-            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -981,10 +1050,6 @@ class Rules:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
-        
-        if sentence.find(u"não") == -1:
-            
-            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -1009,7 +1074,7 @@ class Rules:
         else:
             sentence = opinion.sentence.lower()
         
-        if sentence.find(u"um") == -1 and sentence.find(u"não") == -1:
+        if sentence.find(u"um") == -1:
             
             return (0,'')
          
@@ -1028,8 +1093,8 @@ class Rules:
         
         """ Ex: não mostrou falta de coragem """
         
-        info = u'Regra \"[NEG] [VSUP] falta de [N+] ? Pos\""-> '        
-        regex = ur'(\W|^)({0}) ({1}) falta de ({2})(\W|$)'.format(self.neg,self.vsup,self.nounsPosRegex)
+        info = u'Regra \"[NEG] [VSUP] (falta|excesso) de [N+] ? Pos\""-> '        
+        regex = ur'(\W|^)({0}) ({1}) (falta|excesso) de ({2})(\W|$)'.format(self.neg,self.vsup,self.nounsPosRegex)
         
         if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
@@ -1163,8 +1228,8 @@ class Rules:
         
         """ Ex: é um perfeito idiota """
         
-        info = u'Regra \"[VCOP] um [AJD+] [AJD-] ? Neg\""-> '        
-        regex = ur'(\W|^)({0}) um ({1}) ({2})(\W|$)'.format(self.vcop,self.adjsPosRegex,self.adjsNegRegex)
+        info = u'Regra \"[VCOP] um [AJD+|0] [AJD-] ? Neg\""-> '        
+        regex = ur'(\W|^)({0}) um ({1}|{2}) ({3})(\W|$)'.format(self.vcop,self.adjsPosRegex,self.adjsNeutRegex,self.adjsNegRegex)
         
         if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
@@ -1190,8 +1255,8 @@ class Rules:
         
         """ Ex: é um verdadeiro desastre """
         
-        info = u'Regra \"[VCOP] um [AJD+] [N-] ? Neg\""-> '        
-        regex = ur'(\W|^)({0}) um ({1}) ({2})(\W|$)'.format(self.vcop,self.adjsPosRegex,self.nounsNegRegex)
+        info = u'Regra \"[VCOP] um [AJD+|0] [N-] ? Neg\""-> '        
+        regex = ur'(\W|^)({0}) um ({1}|{2}) ({3})(\W|$)'.format(self.vcop,self.adjsPosRegex,self.adjsNeutRegex,self.nounsNegRegex)
         
         if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
@@ -1476,10 +1541,6 @@ class Rules:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
-        
-        if sentence.find(u"não") == -1 and sentence.find(u"nunca") == -1: 
-            
-            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -1504,10 +1565,6 @@ class Rules:
         else:
             sentence = opinion.sentence.lower()
         
-        if sentence.find(u"não") == -1 and sentence.find(u"nunca") == -1: 
-            
-            return (0,'')
-         
         match = re.search(regex,sentence)
         
         if match != None:
@@ -1518,8 +1575,6 @@ class Rules:
             
         else:
             return (0,'')
-
-
 
     def rule33(self,opinion,useProcessedSentence):
         
@@ -1532,10 +1587,6 @@ class Rules:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
-        
-        if sentence.find(u"não") == -1 and sentence.find(u"nunca") == -1: 
-            
-            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -1560,10 +1611,6 @@ class Rules:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
-        
-        if sentence.find(u"não") == -1 and sentence.find(u"nunca") == -1: 
-            
-            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -1589,10 +1636,6 @@ class Rules:
         else:
             sentence = opinion.sentence.lower()
         
-        if sentence.find(u"não") == -1 and sentence.find(u"nunca") == -1: 
-            
-            return (0,'')
-         
         match = re.search(regex,sentence)
         
         if match != None:
@@ -1615,10 +1658,6 @@ class Rules:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
-        
-        if sentence.find(u"não") == -1: 
-            
-            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -1643,10 +1682,6 @@ class Rules:
             sentence = opinion.processedSentence.lower()
         else:
             sentence = opinion.sentence.lower()
-        
-        if sentence.find(u"não") == -1: 
-            
-            return (0,'')
          
         match = re.search(regex,sentence)
         
@@ -1733,14 +1768,54 @@ class Rules:
             return (-1,info) 
             
         else:
-            return (0,'')  
+            return (0,'')                      
 
-                
-    setOfRules = [hasNickName,hasInterjectionWithTarget,hasInterjection,hasLol,hasHehe,hasHeavyPunctuation,
-                  hasSmiley,hasQuotedSentiment,rule4,rule3,rule2,rule1,rule12,rule11,rule14,rule5,rule13,rule16,rule15,
-                  rule17,rule18,rule19,rule6,rule8,rule7,rule30,rule29,rule37,rule38,rule39,rule40,        
-                  rule10,rule9,rule20,rule21,rule23,rule22,rule25,rule24,rule26,rule32,rule31,rule34,rule35,rule33, rule41]                    
     
+        
+    def rule42(self,opinion,useProcessedSentence):
+        
+        info= u'culpa|culpado é|foi do|o [TARGET]'
+        regex = ur'(\W|^)(culpa|culpado) {0} (o|a|do|da)? {1}(\W|$)'.format(self.vcop,opinion.mention)
+        
+        if useProcessedSentence:
+            sentence = opinion.processedSentence.lower()
+        else:
+            sentence = opinion.sentence.lower()
+        
+        if sentence.find(u"culpa") == -1 and sentence.find(u"culpado") == -1:
+            
+            return (0,'')
+         
+        match = re.search(regex,sentence)
+        
+        if match != None:
+            
+            info += match.group() 
+            
+            return (-1,info) 
+            
+        else:
+            return (0,'')
+    
+    setOfRules = [hasPosInterjection,hasNegInterjection,hasPosSmiley,
+                  hasNegSmiley,rule31,hasPosIdiomExpression,hasNegIdiomExpression,
+                  rule33,rule1,rule14,rule2,
+                  rule13,rule3,rule16,rule4,rule15,rule5,rule20,rule6,
+                  rule21,rule7,rule23,rule8,rule22,rule9,rule25,rule10,
+                  rule24,rule11,rule30,rule12,rule41,rule17,rule18,rule19,
+                  rule26,rule29,rule32,rule34,rule35,rule37,rule40,                  
+                  rule38,rule39,rule42,hasHeavyPunctuation,hasQuotedSentiment]
+    
+    clusterOfRules = [[hasHeavyPunctuation],
+                      [hasPosIdiomExpression],[hasNegIdiomExpression],[hasNegSmiley],
+                      [hasPosSmiley],[hasNegInterjection],[hasPosInterjection],
+                      [hasQuotedSentiment],[rule26],[rule32],[rule31],[rule34],
+                      [rule17],[rule12],[rule29],[rule18],[rule19],[rule35], 
+                      [rule33],[rule41],[rule42],[rule1,rule14],[rule2,rule13],
+                      [rule3,rule16],[rule4,rule15],[rule5,rule20],[rule6,rule21],
+                      [rule7,rule23],[rule8,rule22],[rule9,rule25],[rule10,rule24],
+                      [rule11,rule30],[rule37,rule40],[rule38,rule39]]
+        
 def testInterjectionTarget():
     
     sentenceNoMatch = u"O sócrates e passos coelho são bff"
@@ -1778,9 +1853,9 @@ def testInterjection():
     sentenceNoMatch = u"O sócrates e passos coelho são bff"
    
     interjectionSentences = [sentenceNoMatch,                               
-                               u"Foda-se o sócrates e passos coelho são bff!",
-                               u"Fooooda-se o sócrates e passos coelho são bff!",
-                               u"Foooodaaaa-se o sócrates e passos coelho são bff!",
+                               u"Foda-se!",
+                               u"Fooooda-se!",
+                               u"Foooodaaaa-se!",
                                u"Foooodaaaase o sócrates e passos coelho são bff!",
                                u"Foooodaaaasssse o sócrates e passos coelho são bff!",
                                u"Foooodaaaa-seee o sócrates e passos coelho são bff!",
@@ -1818,7 +1893,10 @@ def testInterjection():
                                u"Estamos feitos! O sócrates e passos coelho são bff!",
                                u"Fogo! O sócrates e passos coelho são bff!"
                                
-                               ]                          
+                               ]
+    
+    
+                              
                                                                         
     ruler = getTestRuler()
     
@@ -2003,7 +2081,7 @@ def testSmiley():
     
         o = Opinion(1,s,u"socrates",u"socras",0,None,u"Manual",u"Manual",None)
         
-        v = ruler.hasSmiley(o)
+        v = ruler.hasSmiley(o,False)
         
         
         print s, "->", v 
@@ -2042,11 +2120,11 @@ def testSintaticRules():
     
     sentenceNoMatch = u"O sócrates e passos coelho são bff"    
     
-    s1 = [ruler.rule1,[sentenceNoMatch,0],[u" o sócrates não é uma pessoa honesta ",-1],[u"o sócrates não é uma pessoa honesta",-1]]
-    s2 = [ruler.rule2,[sentenceNoMatch,0],[u" o sócrates não é um tipo autoritário ",1],[u"o sócrates não é um tipo autoritário",1]]
-    s3 = [ruler.rule3,[sentenceNoMatch,0],[u" o sócrates não é um bom político ",-1]]
+    s1 = [ruler.rule1,[sentenceNoMatch,0],[u" o sócrates não é uma pessoa honesta ",-1],[u"o sócrates não é uma pessoa honesta",-1],[u"o sócrates não é uma tipo honesto",-1]]
+    s2 = [ruler.rule2,[sentenceNoMatch,0],[u" o sócrates não é um tipo autoritário ",1],[u"o sócrates não é uma tipo autoritário",1]]
+    s3 = [ruler.rule3,[sentenceNoMatch,0],[u" o sócrates não é um bom político ",-1],[u" o sócrates ñ é um bom político ",-1]]
     s4 = [ruler.rule4,[sentenceNoMatch,0],[u" o sócrates não é um mau político ",1]]
-    s5 = [ruler.rule5,[sentenceNoMatch,0],[u" o sócrates não é um idiota ",1]]
+    s5 = [ruler.rule5,[sentenceNoMatch,0],[u" o sócrates não é um idiota ",1],[u" o sócrates n é um idiota ",1]]
     s6 = [ruler.rule6,[sentenceNoMatch,0],[u" o sócrates não é um embuste ",1]] 
     s7 = [ruler.rule7,[sentenceNoMatch,0],[u" o sócrates não foi nada sincero ",-1]]
     s8 = [ruler.rule8,[sentenceNoMatch,0],[u" o sócrates não é nada parvo ",1]]
@@ -2068,9 +2146,7 @@ def testSintaticRules():
     s24 = [ruler.rule24,[sentenceNoMatch,0],[u" o sócrates é mentiroso ",-1]]
     s25 = [ruler.rule25,[sentenceNoMatch,0],[u" o sócrates foi coerente ",1]]
     s26 = [ruler.rule26,[sentenceNoMatch,0],[u" o idiota do sócrates ",-1]]
-    #s27 = [ruler.rule27,[sentenceNoMatch,0],[u" o sócrates revelou uma enorme falta de respeito ",-1]]
-    #s28 = [ruler.rule28,[sentenceNoMatch,0],[u" o sócrates tem falta de coragem ",-1]]
-    s29 = [ruler.rule29,[sentenceNoMatch,0],[u" o sócrates demonstrou uma enorme arrogância ",-1]]
+    s29 = [ruler.rule29,[sentenceNoMatch,0],[u" o sócrates demonstrou uma alta arrogância ",-1]]
     s30 = [ruler.rule30,[sentenceNoMatch,0],[u" o sócrates demonstrou uma alta coragem ",1],[u" o sócrates demonstrou alta coragem ",1],[u" o sócrates demonstrou um alto empenho ",1]]    
     s31 = [ruler.rule31,[sentenceNoMatch,0],[u" o sócrates não engana ",1],[u" o sócrates não agiu de má-fé ",1]]
     s32 = [ruler.rule32,[sentenceNoMatch,0],[u" o sócrates não está a papaguear ",1]]
@@ -2082,9 +2158,151 @@ def testSintaticRules():
     s39 = [ruler.rule39,[sentenceNoMatch,0],[u" o sócrates tem muita coragem ",1],[u" o sócrates tem coragem ",1]]   
     s40 = [ruler.rule40,[sentenceNoMatch,0],[u" o sócrates tem muito medo ",-1],[u" o sócrates tem medo ",-1]]
     s41 = [ruler.rule41,[sentenceNoMatch,0],[u" o sócrates tem falta de coragem ",-1],[u" o sócrates tem falta de alegria ",-1],[u" o sócrates tem excesso de confiança ",-1]]
+    s42 = [ruler.rule42,[sentenceNoMatch,0],[u"a culpa foi do sócrates",-1],[u" o culpado é o sócrates",-1]]
     
-    testCases = [s30]
+    shasPosInterjection = [ruler.hasPosInterjection,[sentenceNoMatch,0],[u'força!',1],[u'fooorça!',1],[u'fooorçaaaaa!',1],[u'braaaavo!',1],
+                                                    [u'brrraaaavoooo!',1],[u'bravoooooo!',1],[u'boa!',1],[u'boooaaaa!',1],[u'booooooa!',1],
+                                                    [u'lindo!',1],[u'lindoooo!',1],[u'liiiinnndooooo!',1],[u'fixe!',1],[u'fixeeeee!',1],
+                                                    [u'fiiiiiiixe!',1],[u'muito bem!',1],[u'muitoooo bem!',1],[u'muito bom!',1],
+                                                    [u'mto bem!',1],[u'mtoooo beeeeeem!',1],[u'mto boooom!',1],
+                                                    [u'coragem!',1],[u'coraaaaagem!',1],[u'cooooraagem!',1],
+                                                    [u'viva!',1],[u'vivaaaaa!',1],[u'viiivaaaa!',1],
+                                                    [u'vai!',1],[u'vaaaaai!',1],[u'vaaaiiiiii!',1],
+                                                    [u'vamos!',1],[u'vaaaamooooos!',1],[u'vaaamos!',1],
+                                                    [u'vamos lá!',1],[u'vamos laaaa!',1],[u'vaaaamos láááá!',1],
+                                                    [u'bora lá!',1],[u'boooooraa lá!',1],[u'bora laaaa!',1],
+                                                    [u'espetáculo!',1],[u'espetáááácuuuloo!',1],[u'espetaaaaculooo!',1],
+                                                    [u'uau!',1],[u'uuuuauuuu!',1],[u'uaaaau!',1],
+                                                    [u'yes!',1],[u'yeeeees!',1],[u'yessss!',1],
+                                                    [u'love!',1],[u'looooove!',1],[u'loooooveeeee!',1],
+                                                    [u'like!',1],[u'liiiiike!',1],[u'liiiiikeeee!',1],
+                                                    [u'nice!',1],[u'niiiiiice!',1],[u'niceeeee!',1],
+                                                    [u'goal!',1],[u'gooooooal!',1],[u'gooooaaaaal!',1],
+                                                    [u'scored!',1],[u'scooooored!',1],[u'score!',1]]         
+
+ 
+    shasNegInterjection = [ruler.hasNegInterjection,[sentenceNoMatch,0],                               
+                                                   [u"Foda-se!",-1],
+                                                   [u"Fooooda-se!",-1],
+                                                   [u"Foooodaaaa-se!",-1],
+                                                   [u"Foooodaaaase!",-1],
+                                                   [u"Foooodaaaasssse!",-1],
+                                                   [u"Foooodaaaa-seee!",-1],
+                                                   [u"merda!",-1],
+                                                   [u"meeeerda!",-1],
+                                                   [u"meeeerdaaa!",-1],
+                                                   [u"meeeerdaaa!!!",-1],
+                                                   [u"meeeerddaaa!!!",-1],
+                                                   [u"está fdd!",-1],
+                                                   [u"esta fdd!",-1],
+                                                   [u"ta fdd!",-1],
+                                                   [u"tá fdd!",-1],
+                                                   [u"que nojo!",-1],
+                                                   [u"que nojo!!",-1],
+                                                   [u"que noooojo!",-1],
+                                                   [u"que noojoooo!",-1],
+                                                   [u"que noojoooo!!!",-1],
+                                                   [u"credo!",-1],                                                   
+                                                   [u"meu deus!",-1],
+                                                   [u"meu deus! !",-1],
+                                                   [u"oh meu deus !",-1],
+                                                   [u"oh meu deus! !",-1],
+                                                   [u"Ui !",-1],
+                                                   [u"Uuuuuui !" ,-1],
+                                                   [u"Vai Abaixo!",-1],
+                                                   [u"Vai Fora!",-1],
+                                                   [u"rua!!!",-1],
+                                                   [u"Para a Rua !",-1],
+                                                   [u"Safa! ",-1],
+                                                   [u"Basta!!",-1],
+                                                   [u"Cruzes!!",-1],
+                                                   [u"passou-se!  !",-1],
+                                                   [u"Livra!!",-1],
+                                                   [u"Estamos feitos!!",-1],
+                                                   [u"Fogo!!",-1],
+                                                    [u"já fomos!",-1],[u"jaaa fooomos!",-1],[u"jááá fomooos!",-1],
+                                                    [u"que mau!",-1],[u"que mau",0],[u"quee maaau!",-1],
+                                                    [u"foooosga-se!",-1],[u"fosga-se!",-1],[u"fosga-se",0],
+                                                    [u"jáááá chega!",-1],[u"já cheeegaaa!",-1],[u"jaaaa chega!",-1],
+                                                    [u"socorro!",-1],[u"socorro!",-1],[u"socorro!",-1],
+                                                    [u"uuuui!",-1],[u"uuuuiiiii!",-1],[u"ui!",-1],
+                                                    [u"aaaaaai!",-1],[u"aiiiiii!",-1],[u"ai!",-1],
+                                                    [u"oh!",-1],[u"oooooooh!",-1],[u"oooohhhhhh!",-1],
+                                                    [u"irra!",-1],[u"iiiirrrrraaaa!",-1],[u"iirraaaaa!",-1],
+                                                    [u"apre!",-1],[u"aaaaaapre!",-1],[u"apreeee!",-1],
+                                                    [u"raios!",-1],[u"raaaaios!",-1],[u"raaaiiiioooos!",-1],
+                                                    [u"mandem-no embora!",-1],
+                                                    [u"sai daí!",-1],[u"saaaaai daííí!",-1],[u"sai daaaaaiii!",-1],
+                                                    [u"tirem-no daí!",-1],[u"tirem-no daí!",-1],[u"tirem-no daí!",-1],
+                                                    [u"dass!",-1],[u"dasssss!",-1],[u"daaaassssss!",-1],
+                                                    [u"fora!",-1],[u"foraaaaa!",-1],[u"fooooraaaaa!",-1]]
     
+    
+    
+    sHasGoodSmiley = [ruler.hasPosSmiley,[sentenceNoMatch,0],
+                                        [u"O sócrates e passos coelho são :) ",1],
+                                        [u"O sócrates e passos coelho são :))))",1],                       
+                                        [u"O sócrates e passos coelho são :D",1],
+                                        [u"O sócrates e passos coelho são :DDD",1], 
+                                        [u"O sócrates e passos coelho são :-D",1],
+                                        [u"O sócrates e passos coelho são :-DDD",1],
+                                        [u"O sócrates e passos coelho são 8)",1],
+                                        [u"O sócrates e passos coelho são 8))))",1],
+                                        [u"O sócrates e passos coelho são 8D",1],
+                                        [u"O sócrates e passos coelho são 8DDD",1],
+                                        [u"O sócrates e passos coelho são XD",1],
+                                        [u"O sócrates e passos coelho são X-D",1],
+                                        [u"O sócrates e passos coelho são xD",1],
+                                        [u"O sócrates e passos coelho são x-D",1],
+                                        [u"O sócrates e passos coelho são :-) sjajsa",1],
+                                        [u"O sócrates e passos coelho são :-)))) dssd",1]]
+    
+    sHasBadSmiley = [ruler.hasNegSmiley,[sentenceNoMatch,0],   
+                                        [u"O sócrates e passos coelho são :(  sasa",-1],
+                                        [u"O sócrates e passos coelho são :((",-1], 
+                                        [u"O sócrates e passos coelho são :S",-1],
+                                        [u"O sócrates e passos coelho são :SSS ",-1],
+                                        [u"O sócrates e passos coelho são :ss dewedwe",-1],
+                                        [u"O sócrates e passos coelho são :s",-1],                                                                                    
+                                        [u"O sócrates e passos coelho são :-S Kokdas",-1],
+                                        [u"O sócrates e passos coelho são :-SSS",-1],
+                                        [u"O sócrates e passos coelho são :-ss ",-1],
+                                        [u"O sócrates e passos coelho são :-s ",-1],                                           
+                                        [u"O sócrates e passos coelho são :-(",-1],
+                                        [u"O sócrates e passos coelho são :-((",-1],
+                                        [u"O sócrates e passos coelho são 8(",-1],
+                                        [u"O sócrates e passos coelho são 8((",-1],
+                                        [u"O sócrates e passos coelho são 8S",-1],
+                                        [u"O sócrates e passos coelho são 8SSS",-1],
+                                        [u"O sócrates e passos coelho são 8ss",-1],
+                                        [u"O sócrates e passos coelho são 8s",-1]]
+                    
+    sHasPosIdiomExp = [ruler.hasPosIdiomExpression,[sentenceNoMatch,0],
+                                                    [u"ele acertou na mosca",1],
+                                                    [u"o gajo agarrou a oportunidade",1]]
+    
+    sHasNegIdiomExp = [ruler.hasNegIdiomExpression,[sentenceNoMatch,0],
+                                                    [u"ele apanhou por tabela",-1],
+                                                    [u"entregou o ouro ao bandido ",-1]]
+                       
+    
+    shasHeavyPunctuation = [ruler.hasHeavyPunctuation,[sentenceNoMatch,0],
+                             [u"O sócrates e passos coelho são bff!",0],
+                           [u"O sócrates e passos coelho são bff?",0],                           
+                           [u"O sócrates e passos coelho são bff!!",0],
+                           [u"O sócrates e passos coelho são bff??",0],                           
+                           [u"O sócrates e passos coelho são bff!!!",0],
+                           [u"O sócrates e passos coelho são bff!?!?",-1],
+                           [u"O sócrates e passos coelho são bff??!!",-1],
+                           [u"O sócrates e passos coelho são bff??!?",-1],
+                           [u"O sócrates e passos coelho são bff!?!",-1],
+                           [u"O sócrates e passos coelho são bff!?!!?",-1],
+                           [u"O sócrates e passos coelho são bff?!!!?",-1],
+                           [u"O sócrates e passos coelho são bff!??!",-1]]
+    
+    testCases = [shasHeavyPunctuation]
+    
+    """
     testCases = [s1,
              s2,
              s3,
@@ -2122,8 +2340,17 @@ def testSintaticRules():
              s38,
              s39,
              s40,
-             s41]
-    
+             s41,
+             s42,
+             shasPosInterjection,
+             shasNegInterjection,
+             sHasGoodSmiley,
+             sHasBadSmiley,
+             sHasPosIdiomExp,
+             sHasNegIdiomExp,
+             shasHeavyPunctuation]
+        """
+        
     failures = []
     
     for test in testCases:
@@ -2161,6 +2388,17 @@ def getTestRuler():
     
     return Rules(politicians,sentiTokens)    
 
+def getTestNaive():
+
+    politiciansFile = "../Resources/players.txt"
+    sentiTokensFile = "../Resources/SentiLex-flex-PT02.txt"
+    exceptTokensFile = "../Resources/SentiLexAccentExcpt.txt"
+    
+    politicians = Persons.loadPoliticians(politiciansFile)
+    sentiTokens = SentiTokens.loadSentiTokens(sentiTokensFile,exceptTokensFile)
+    
+    return Naive(politicians,sentiTokens)
+
 def getMultiWordsHandler():
     
     politiciansFile = "../Resources/politicians.txt"
@@ -2176,6 +2414,30 @@ def getMultiWordsHandler():
     multiWordTokenizer.addMultiWords(SentiTokens.getMultiWords(sentiTokens))    
     
     return multiWordTokenizer
+
+def testInferTarget():
+    
+    a = u"aí vai Özil com a bola..."
+    b = u"Ilkay Gündogan a fazer um grande lance"
+    c = u"o que é que se passa entre o L. Schøne e Ricardo Quaresma??"
+    d = u"quem é o Kjær!?!?!"
+    e = u"alto corte de Laštůvka"
+    
+    naive = getTestNaive()
+    
+    o = Opinion(1,c,None,None,0,None,u"Manual",u"Manual",None)
+    
+    res = naive.inferTarget2(o)
+    
+    if len(res) > 0:
+        
+        for r in res:
+            
+            print r.tostring()
+            print "\n\n" 
+    else:
+        print "Not fonud"
+   
 
 def testMultiWords():
     
@@ -2197,6 +2459,6 @@ if __name__ == '__main__':
     
     print "Go!"
     
-    testSintaticRules()
+    testInferTarget()
     
     print "Done!"

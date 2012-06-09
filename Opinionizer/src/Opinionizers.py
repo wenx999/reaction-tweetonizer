@@ -46,9 +46,7 @@ class Naive:
                     
 
         self.targetsRegex = buff.getvalue().strip('|')
-        
-        print self.targetsRegex 
-        
+            
         buff = StringIO.StringIO()
                  
         # Build a regex for identifying sentiment tokens

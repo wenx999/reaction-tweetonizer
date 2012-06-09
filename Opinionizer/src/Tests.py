@@ -24,6 +24,22 @@ import Preprocessor
 import Persons
 import SentiTokens
 
+def testFindSenti():
+    
+    s1 = "Targets: coentrão; sentiTokens:; score:0;"
+    s2 = "Targets: coentrão; sentiTokens:falha(-1) culpa(0) ; score:-1;"
+    
+    regex = ur'(\W|^)sentiTokens:(.*?);(\W|$)'
+         
+    match = re.search(regex,s1).group(2)
+    
+    print "S1: ", match, " ", len(match.strip(' '))
+   
+    match = re.search(regex,s2).group(2)
+    
+    print "S2: ", match, " ", len(match.strip(' ')) 
+
+
 def testSubprocess():    
     
     xmlStarlet = 'xmlstarlet sel -t -c "//entity[@id=\'{0}\']" *.xml ' 
@@ -417,7 +433,7 @@ if __name__ == '__main__':
     
     print "GOOO!"
     
-    print separateSpecialSymbols("*(ola~silvio!!!!! (aetolas?")
+    testFindSenti()
     
     
     """
