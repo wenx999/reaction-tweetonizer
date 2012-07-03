@@ -13,6 +13,10 @@ import re
 import Preprocessor
 import pickle
 
+SENTI_CACHE = "../cache/sentiTokens.cache"
+PERSONS_CACHE = "../cache/persons.cache"
+MULTIWORD_CACHE = "../cache/multiwords.cache"
+
 ARFF_HEADERS = """
 
 @relation twitometro
@@ -231,7 +235,7 @@ def isNewsSource(sentence):
         return 0
 
 
-def logTweets(listOfTweets,path):
+def logTweets_old(listOfTweets,path):
     
     f = codecs.open(path,"w","utf-8")
     
@@ -250,6 +254,25 @@ def logTweets(listOfTweets,path):
     
     f.close()
 
+def logTweets(listOfTweets,path):
+    
+    f = codecs.open(path,"w","utf-8")
+    
+    #Column headers
+    f.write("ID|USER|TARGET|MENTION|POLARITY|INFO|MESSAGE|PROCESSED\n")
+    
+    for tweet in listOfTweets:            
+                        
+            target = tweet.target.replace("\n"," ").replace("\"","").replace("'","")
+            mention = tweet.mention.replace("\n"," ").replace("\"","").replace("'","")
+            metadata = tweet.metadata.replace("\n"," ").replace("'","")
+            sentence = tweet.sentence.replace("|","\\").replace("\n"," ").replace("\t"," ").replace("\r"," ").replace("'","")
+            processedSentence = tweet.processedSentence.replace("|","\\").replace("\n"," ").replace("\t"," ").replace("\r"," ").replace("'","")
+            
+            f.write(str(tweet.id) + "|" + tweet.user + "|" + target  + "|" + mention + "|" + str(tweet.polarity ) + "|" + metadata +  "|" + sentence + "|" + processedSentence + "\n")
+    
+    f.close()
+
 def testOldProcessWithDiagnostics(sourceFile):
     
     results = {"numOf-1":0,"correct-1":0,"numOf0":0,"correct0":0,"numOf1":0,"correct1":0}
@@ -260,12 +283,12 @@ def testOldProcessWithDiagnostics(sourceFile):
     listOfTweets = []
     i=0
     
-    politicians = getPoliticians()
-    sentiTokens = getSentiTokens()
+    politicians = getFromCache(PERSONS_CACHE) #getPoliticians()
+    sentiTokens = getFromCache(SENTI_CACHE) #getSentiTokens()
     
     rulesClassifier = EuroOpinionizers.Rules(politicians,sentiTokens)     
     naiveClassifier = EuroOpinionizers.Naive(politicians,sentiTokens)    
-    multiWordTokenizer = getMultiWordsTokenizer(politicians, sentiTokens)
+    multiWordTokenizer = getFromCache(MULTIWORD_CACHE) #getMultiWordsTokenizer(politicians, sentiTokens)
     
     print "loading tweets..."
     
@@ -300,8 +323,7 @@ def testOldProcessWithDiagnostics(sourceFile):
                         polarity = int(tweet[SENTIMENT_POLARITY]))            
             listOfTweets.append(o)
     
-            i = i+1
-            
+            i = i+1            
             """
             if i!=0 and i%10 == 0:
                 
@@ -317,13 +339,23 @@ def testOldProcessWithDiagnostics(sourceFile):
               
     for tweet in listOfTweets:
         
-        classifiedTweet = rulesClassifier.inferPolarity(tweet,False)
-            
-        #if not possible use the naive classifier
-        if classifiedTweet.polarity == 0:
-            classifiedTweet = naiveClassifier.inferPolarity(classifiedTweet,False)
-            
-        totalList.append(classifiedTweet)
+        rulesTweet = rulesClassifier.inferPolarity(tweet,True)
+        naiveTweet = naiveClassifier.inferPolarity(tweet,True)
+        
+        regex = ur"score:(.*);"
+        sentiScore = re.search(regex, naiveTweet.metadata).group(1)
+        tweetScore = int(sentiScore) + int(rulesTweet.polarity)
+        
+        if tweetScore > 0:
+            tweet.polarity = 1
+        elif tweetScore < 0:
+            tweet.polarity = -1
+        else:
+            tweet.polarity = 0
+        
+        tweet.metadata = rulesTweet.metadata + ";" + naiveTweet.metadata
+        
+        totalList.append(tweet)
         
         """
         if tweet.polarity == -1:
@@ -357,7 +389,7 @@ def testOldProcessWithDiagnostics(sourceFile):
     logTweets(falseNeut,"./falseNeut.csv")
     logTweets(falsePos,"./falsePos.csv")
     """
-    logTweets(totalList,"./totalList.csv")
+    logTweets(totalList,"./newProcess.csv")
     
     """
     g = open("results.txt","w")
@@ -561,6 +593,18 @@ def rulesDiagnosticHelper(rulesVector):
         v += 1
     
     return matchedRules
+
+def getFromCache(filename):
+    
+    obj = None
+    
+    try:
+        f = open(filename, "r")    
+        obj = pickle.load(f)
+    except IOError:
+        obj = None
+        
+    return obj
     
 def getPoliticians():
     
@@ -680,66 +724,9 @@ def generateTextFeatures(sourceFile,destinyFile):
             
     featuresFile.close()   
 
-def a1():
-    
-    return None #"a1"    
-
-def a2():
-    
-    return "a2"
-
-def a3():
-    
-    return "a3"
-
-def b1():
-    
-    return None #"b1"
-
-def b2():
-    
-    return "b2"
-
-def c1():
-    
-    return None #"c1"
-
-def c2():
-    
-    return None #"c2"
-
-def c3():
-    
-    return "c3"
-    
-def rulesCluster():
-        
-    setOfRules = [[a1,a2,a3],[b1,b2],[c1,c2,c3]]
-    featureSet = []
-    
-    for rules in setOfRules:
-        
-        match = False
-        
-        for rule in rules:
-            
-            if not match:
-                result = rule()
-            
-                if result != None:
-                    match = True
-                    featureSet.append(result)
-                else:
-                    featureSet.append(0)
-            else:
-                featureSet.append(0)
-                
-    return featureSet     
 
 if __name__ == '__main__':
     
-    print "GO"
-   
     testOldProcessWithDiagnostics("../Results/tweets623.csv")   
     
     print "Done!"

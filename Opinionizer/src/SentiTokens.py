@@ -88,11 +88,22 @@ def loadSentiTokens(path,pathExceptions):
     
     lemmaRegex = ",(.*?)\."     
     flexRegex = "^(.*?),"    
-    polarityRegex = "POL:..=(-1|0|1)(;|$)"
+    polarityRegex = "POL:..=(-1|0|1)(?:;|$)"
     posRegex = "PoS=(.*?);"
     
     currentLemma = re.search(lemmaRegex,firstLine).group(1)
-    currentPolarity = re.search(polarityRegex,firstLine).group(1)
+    
+    pol = re.findall(polarityRegex,firstLine)
+    pol1 = int(pol[0])
+    
+    try:
+        pol2 = int(pol[1])
+      
+    except IndexError:
+        pol2 = 0
+    
+    currentPolarity = str(pol1 + pol2)
+    
     currentPos = re.search(posRegex,firstLine).group(1).lower()
     currentFlex = re.search(flexRegex,firstLine).group(1)
     currentFlexions = []
@@ -119,7 +130,20 @@ def loadSentiTokens(path,pathExceptions):
                     adjectives.append(SentiToken(currentLemma,currentPolarity,currentPos,currentFlexions))
                                         
                     currentLemma = lemma                    
-                    currentPolarity = re.search(polarityRegex,line).group(1)                    
+                    
+                    #currentPolarity = re.search(polarityRegex,line).group(1)
+                    pol = re.findall(polarityRegex,line)
+                    
+                    pol1 = int(pol[0])
+                    
+                    try:
+                        pol2 = int(pol[1])
+                       
+                    except IndexError:
+                        pol2 = 0
+                    
+                    currentPolarity = str(pol1 + pol2)
+                                        
                     currentPos = re.search(posRegex,line).group(1).lower()
                     currentFlexions = []
                     currentFlex = re.search(flexRegex,line).group(1)
@@ -139,7 +163,8 @@ def loadSentiTokens(path,pathExceptions):
                     if currentFlex not in exceptions and currentFlex != Utils.normalize(currentFlex):
                         
                         currentFlexions.append(Utils.normalize(currentFlex))
-                    
+            else:
+                print "rejected: ", line        
         except:
             None
     f.close()    
@@ -162,6 +187,17 @@ def getMultiWords(listOfSentiTokens):
     
     return multiWords
 
+def testGetPolarity():
+    
+    line = "abusa,abusar.PoS=V;FLEX=P:2s|P:4s|P:3s|Y:2s;TG=HUM:N0:N1;POL:N0=-1;POL:N1=0;ANOT=MAN"
+    polarityRegex = "POL:..=(-1|0|1)(?:;|$)"
+    m = re.findall(polarityRegex,line)
+    print m[0]
+    print m[1]
+    
+    #pol2 = int()
+
+
 def loadExceptionTokens(path): 
     
     f = codecs.open(path,"r", "utf-8")    
@@ -174,19 +210,21 @@ if __name__ == "__main__":
     
     print "Go"
     
+  
     #loadExceptionTokens("../Resources/SentiLexAccentExcpt.txt")
     f = codecs.open("res.txt","w","utf-8")
     
-    sentiTokens = loadSentiTokens("../Resources/SentiLex-flex-PT02.txt","../Resources/SentiLexAccentExcpt.txt")
-        
+    sentiTokens = loadSentiTokens("../Resources/SentiLex-flex-PT03.txt","../Resources/SentiLexAccentExcpt.txt")
+    """    
     for a in sentiTokens:
         
         None
         print "-----------------------"
         print a.tostring().encode("utf-8")        
     
-    
+    """
     print len(sentiTokens)
     f.close()
+ 
        
     print "Done"    

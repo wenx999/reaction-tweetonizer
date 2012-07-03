@@ -212,7 +212,7 @@ if __name__ == "__main__":
 
     debug = True
     
-    targetsFilename = "../Resources/politicians.txt"
+    targetsFilename = "../Resources/euroTargets.txt"
     
     print "Go, persons file is ", targetsFilename
     
@@ -226,14 +226,14 @@ if __name__ == "__main__":
 
         print a.tostring()
 
-        for m in a.listOfMentions.iterkeys():
-            print m
+        #for m in a.listOfMentions.iterkeys():
+        #    print m
     
     
     print "------ multi palavras: ------"
     
-    for mw in getMultiWords(targets):
+    #for mw in getMultiWords(targets):
         
-        print mw 
+    #    print mw 
     
     print "Done."    

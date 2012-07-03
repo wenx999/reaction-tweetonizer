@@ -1,0 +1,9 @@
+Precision Pos: 0.724590163934
+Recall Pos: 0.492204899777
+
+Precision Neut: 0.286111111111
+Recall Neut: 0.485849056604
+
+Precision Neg: 0.55737704918
+Recall Neg: 0.550161812298
+
