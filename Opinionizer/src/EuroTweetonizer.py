@@ -25,7 +25,6 @@ import pickle
 import Preprocessor
 import cStringIO
 import re
-from gi.overrides.keysyms import End
 
 TARGET = 0
 N_TWEETS = 1
@@ -35,6 +34,10 @@ NEGATIVES = 4
 SENTI_CACHE = "../cache/sentiTokens.cache"
 PERSONS_CACHE = "../cache/persons.cache"
 MULTIWORD_CACHE = "../cache/multiwords.cache"
+
+WIN_SENTI_CACHE = "D:\workspace\Opinionizer\cache\sentiTokens.cache"
+WIN_PERSONS_CACHE = "D:\workspace\Opinionizer\cache\persons.cache"
+WIN_MULTIWORD_CACHE = "D:\workspace\Opinionizer\cache\multiwords.cache"
 
 access_key_test = "284707222-ZRvtSilVFXGcEYT8AZ04STWP9q7VXofN3L3Ufx2s"
 access_secret_test = "1PkYjXaJWzSyd0K6Z4g5Wsg6NZ9iVNNOxI277ELrbqA"
@@ -170,7 +173,7 @@ def getFeatures(targetsFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,lis
     
     print "Loading resources...\nTargets: " + targetsFile
         
-    targets = getFromCache(PERSONS_CACHE)
+    targets = None#getFromCache(PERSONS_CACHE)
     
     if targets != None:
         print "Target list found on cache!"
@@ -180,7 +183,7 @@ def getFeatures(targetsFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,lis
     
     print "SentiTokens: " + sentiTokensFile + "\nExceptTokens: " +  exceptSentiTokens
     
-    sentiTokens = getFromCache(SENTI_CACHE)  
+    sentiTokens = None#getFromCache(SENTI_CACHE)  
     
     if sentiTokens != None:
         print "SentiTokens found on cache!"
@@ -190,7 +193,7 @@ def getFeatures(targetsFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,lis
     
     print "Multiword Tokenizer: " + multiWordsFile
     
-    multiWordTokenizer = getFromCache(MULTIWORD_CACHE)
+    multiWordTokenizer = None#getFromCache(MULTIWORD_CACHE)
     
     if multiWordTokenizer != None:
         print "Multiword Tokenizer found on cache"
@@ -390,17 +393,18 @@ def logClassifiedTweets(listOfTweets,path):
     f = codecs.open(path,"w","utf-8")
     
     #Column headers
-    f.write("ID|USER|TARGET|MENTION|POLARITY|INFO|MESSAGE|TAGGED\n")    
+    f.write("DATE|ID|USER|TARGET|MENTION|POLARITY|INFO|MESSAGE|TAGGED\n")    
         
     for tweet in listOfTweets:            
-                    
+        
+        date = tweet.date
         target = tweet.target.replace("\n"," ")
         mention = tweet.mention.replace("\n"," ")
         metadata = tweet.metadata.replace("\n"," ")
         sentence = tweet.sentence.replace("|","\\").replace("\n"," ").replace("\t"," ").replace("\r"," ")
         processedSentence = tweet.processedSentence.replace("|","\\").replace("\n"," ").replace("\t"," ").replace("\r"," ")
         
-        f.write("\""+str(tweet.id) + "\"|" + tweet.user + "|\"" + target  + "\"|\"" + mention + "\"|" + str(tweet.polarity ) + "|\"" + metadata +  "\"|\"" + sentence + "\"|\"" + processedSentence + "\"\n")
+        f.write(str(date)+"|"+"\""+str(tweet.id) + "\"|" + tweet.user + "|\"" + target  + "\"|\"" + mention + "\"|" + str(tweet.polarity ) + "|\"" + metadata +  "\"|\"" + sentence + "\"|\"" + processedSentence + "\"\n")
     
     f.close()
 
@@ -662,6 +666,67 @@ def getNewTweets(beginDate,endDate):
    
     return listOfTweets
 
+def getNewTweets2(beginDate,endDate):
+    
+    """
+        Gets tweets from a service for a certain period
+        Params: begin date 
+                end date
+                    
+        Returns: list of Opinion instances
+    """
+    
+    print "Getting new tweets..."
+    #return []
+    #requestTweets ="http://voxx.sapo.pt/cgi-bin/Euro2012/get_tweets.pl?flag=extra_fields&numTweets=100000&beginDate=2012-06-07%2014:30:00&endDate=2012-06-07%2018:30:00"
+    #requestTweets = "http://pattie.fe.up.pt/solr/portuguese/select/?q=created_at:[2012-09-06T00:00:00Z%20TO%202012-09-07T00:00:00Z]&indent=on&wt=json&rows=100000&fl=text,id,created_at,user_id"
+    #requestTweets = "http://pattie.fe.up.pt/solr/portuguese/select/?q=created_at:[2012-09-07T00:00:00Z%20TO%202012-09-08T00:00:00Z]&indent=on&wt=json&rows=100000&fl=text,id,created_at,user_id"
+    requestTweets = "http://pattie.fe.up.pt/solr/portuguese/select/?q=created_at:[2012-09-06T00:00:00Z%20TO%202012-09-10T00:00:00Z]&indent=on&wt=json&rows=100000&fl=text,id,created_at,user_id"
+    #requestTweets = "http://pattie.fe.up.pt/solr/portuguese/select/?q=passos%20coelho&created_at:[2012-05-25T13:00:00Z%20TO%202012-05-25T15:00:00Z]&indent=on&wt=json&rows=80000&fl=text,id,created_at,user_id%22"
+    #users = loadPortugueseUsers("../Resources/top_portuguese_users.csv")
+    
+    opener = urllib2.build_opener()   
+    
+    if beginDate.strftime('%Y') == "1900":
+       
+        print "Getting Tweets from STDIN ..."
+        twitterData = sys.stdin;
+        
+    else:        
+        request = requestTweets.format(urllib.quote(beginDate.strftime('%Y-%m-%d %H:%M:%S')),
+                                       urllib.quote(endDate.strftime('%Y-%m-%d %H:%M:%S')))
+                 
+        print "Requesting: " + request
+        
+        twitterData = opener.open(request)
+        
+    #Read the JSON response
+    jsonTwitter = simplejson.loads(unicode(twitterData.read().decode("utf-8")))  
+                                
+    listOfTweets = []
+    i = 0
+    
+    for tweet in jsonTwitter["response"]["docs"]:
+        
+        i+=1
+        
+        #print tweet
+        #continue
+    
+        #if tweet["TwitterUserId"] in users:
+            
+        date =  datetime.strptime(tweet["created_at"], '%Y-%m-%dT%H:%M:%SZ')
+         
+        listOfTweets.append(Opinion(tweet["id"],
+                                    unicode(tweet["text"]),
+                                    user=unicode(tweet["user_id"]),         
+                                    date=date))
+                    
+    print len(listOfTweets), " tweets (of "+ str(i) + ") loaded\n"  
+   
+    return listOfTweets
+
+
 def loadPortugueseUsers(filename):
     
     f = open(filename,"r")
@@ -777,7 +842,8 @@ def getFromCache(filename):
     obj = None
     
     try:
-        f = open(filename, "r")    
+        f = open(filename, "r")
+        print filename    
         obj = pickle.load(f)
     except IOError:
         obj = None
@@ -809,27 +875,28 @@ def processTweets(targetsFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,t
     
     print "Loading resources...\nTargets: " + targetsFile
         
-    targets = getFromCache(PERSONS_CACHE)
+    targets = None#getFromCache(WIN_PERSONS_CACHE)
     
     if targets != None:
         print "Target list found on cache!"
     else:
         targets = Persons.loadPoliticians(targetsFile)
-        putInCache(targets, PERSONS_CACHE) 
+        putInCache(targets, WIN_PERSONS_CACHE) 
     
     print "SentiTokens: " + sentiTokensFile + "\nExceptTokens: " +  exceptSentiTokens
     
-    sentiTokens = getFromCache(SENTI_CACHE)  
+    sentiTokens = None#getFromCache(WIN_SENTI_CACHE)  
     
     if sentiTokens != None:
         print "SentiTokens found on cache!"
     else:
         sentiTokens = SentiTokens.loadSentiTokens(sentiTokensFile,exceptSentiTokens)
-        putInCache(sentiTokens, SENTI_CACHE)
+       
+        putInCache(sentiTokens, WIN_SENTI_CACHE)
     
     print "Multiword Tokenizer: " + multiWordsFile
     
-    multiWordTokenizer = getFromCache(MULTIWORD_CACHE)
+    multiWordTokenizer = None#getFromCache(WIN_MULTIWORD_CACHE)
     
     if multiWordTokenizer != None:
         print "Multiword Tokenizer found on cache"
@@ -837,7 +904,7 @@ def processTweets(targetsFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,t
         multiWordTokenizer = MultiWordHandler(multiWordsFile)
         multiWordTokenizer.addMultiWords(Persons.getMultiWords(targets))
         multiWordTokenizer.addMultiWords(SentiTokens.getMultiWords(sentiTokens))
-        putInCache(multiWordTokenizer, MULTIWORD_CACHE)
+        putInCache(multiWordTokenizer, WIN_MULTIWORD_CACHE)
     
     print  "Inferring polarity..."
     
@@ -888,6 +955,7 @@ def processTweets(targetsFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,t
     
     return analyzedTweets            
 
+
 def processTweets_old(targetsFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,tweets):
     
     """ 
@@ -902,9 +970,10 @@ def processTweets_old(targetsFile,sentiTokensFile,exceptSentiTokens,multiWordsFi
          tweets -> list of tweets
     """
     
+    print "hell yeah!"
     print "Loading resources...\nTargets: " + targetsFile
         
-    targets = None #getFromCache(PERSONS_CACHE)
+    targets = getFromCache(PERSONS_CACHE)
     
     if targets != None:
         print "Target list found on cache!"
@@ -946,39 +1015,48 @@ def processTweets_old(targetsFile,sentiTokensFile,exceptSentiTokens,multiWordsFi
         
         t0 = datetime.now()
         
-        #try to classify with rules...
-        analyzedTweet = rules.inferPolarity(tweet,True)
+        #print "antes"
         
-        #if not possible use the naive classifier
-        if analyzedTweet.polarity == 0:
-            analyzedTweet = naive.inferPolarity(analyzedTweet,True)
+        tweetsWithTarget = naive.inferTarget(tweet)
         
-        if analyzedTweet.polarity == 0:
+        if tweetsWithTarget != None :
             
-            regex = ur'(\W|^)sentiTokens:(.*?);(\W|$)'            
+            #a tweet can have multiple targets (in that case the message is replicated)
+            for tweet in tweetsWithTarget:       
+        
+                #try to classify with rules...
+                analyzedTweet = rules.inferPolarity(tweet,False)
+                print "depois"
+                #if not possible use the naive classifier
+                if analyzedTweet.polarity == 0:
+                    analyzedTweet = naive.inferPolarity(analyzedTweet,False)
+                
+                if analyzedTweet.polarity == 0:
+                    
+                    regex = ur'(\W|^)sentiTokens:(.*?);(\W|$)'            
+                    
+                    match = re.search(regex,analyzedTweet.metadata).group(2)
+                    print "match: ", match
+                    if len(match.strip(' ')) == 0:
+        
+                        rejectedTweets.append(analyzedTweet)
+                    else:
+                        analyzedTweets.append(analyzedTweet)
+                else:
+                    analyzedTweets.append(analyzedTweet)
+                
+                t1 = datetime.now()
             
-            match = re.search(regex,analyzedTweet.metadata).group(2)
+                print tweet.id + " ("+ str(t1-t0) + ")"
             
-            if len(match.strip(' ')) == 0:
-
-                rejectedTweets.append(analyzedTweet)
-            else:
-                analyzedTweets.append(analyzedTweet)
-        else:
-            analyzedTweets.append(analyzedTweet)
-        
-        t1 = datetime.now()
-        
-        print tweet.id + " ("+ str(t1-t0) + ")"
-        
     logClassifiedTweets(rejectedTweets, "./rejectedTweets.csv")    
     
     return analyzedTweets    
            
 def main(targetsFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,logFolder,beginDate,endDate,post):       
     
-    listOfTweets = getNewTweets(beginDate,endDate)
-    processedTweets = processTweets(targetsFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,listOfTweets)
+    listOfTweets = getNewTweets2(beginDate,endDate)
+    processedTweets = processTweets_old(targetsFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,listOfTweets)
     
     logFilename = logFolder + "tweets"+str(beginDate.month)+str(beginDate.day)+str(endDate.day)+".csv"
     logClassifiedTweets(processedTweets,logFilename)
@@ -994,7 +1072,7 @@ if __name__ == '__main__':
     post = False
     beginDate = datetime.today() - timedelta(1)
     endDate = datetime.today()     
-    targetsFile = "../Resources/euroTargets.txt"
+    targetsFile = "../Resources/politicians.txt"
     sentiTokensFile = "../Resources/SentiLex-flex-PT03.txt"    
     exceptSentiTokens = "../Resources/SentiLexAccentExcpt.txt"
     multiWordsFile = "../Resources/multiwords.txt"
@@ -1058,8 +1136,8 @@ if __name__ == '__main__':
     
     
     #evaluate(targetsFile, sentiTokensFile, exceptSentiTokens, multiWordsFile, "../gold_standard_PT-Turquia2.csv", "./silvioTestNew.csv")
-    genFeatures(targetsFile, sentiTokensFile, exceptSentiTokens, multiWordsFile, "../gold_standard_PT-Turquia2.csv", "./silvioFeatss.arff")
+    #genFeatures(targetsFile, sentiTokensFile, exceptSentiTokens, multiWordsFile, "../gold_standard_PT-Turquia2.csv", "./silvioFeatss.arff")
     
-    #main(targetsFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,logFolder,beginDate,endDate,post)
+    main(targetsFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,logFolder,beginDate,endDate,post)
     print "Done!"
     

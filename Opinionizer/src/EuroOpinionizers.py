@@ -152,7 +152,7 @@ class Naive:
         info = u"Targets: "
         specialChars = u' “”\"@)(!#;&:\\@/-_,?.«»\'~ ' 
         sentence = Preprocessor.separateSpecialSymbols(opinion.sentence.lower()) 
-        print sentence
+        #print sentence
         
         matches = []
         
@@ -731,6 +731,7 @@ class Rules:
              
                 info = info + ";" + result[1]
                 rulesScore += int(result[0])
+                break
         
         for clue in self.setOfClues:
 
@@ -1764,8 +1765,9 @@ class Rules:
         """ Ex: não engana OU não agiu de má-fé """
         
         info = u'Regra \"[NEG]\nunca [V-]\[IDIOM-] ? Pos\"-> '        
-        regex = ur'(\W|^)(({0})|nunca) ({1}|{2})(\W|$)'.format(self.neg,self.idiomNegRegex,self.verbNegRegex)
-    
+        regex = ur'(\W|^)({0}|nunca) ({1}|{2})(\W|$)'.format(self.neg,self.idiomNegRegex,self.verbNegRegex)
+        #print regex
+        
         if useProcessedSentence:
             sentence = opinion.processedSentence.lower()
         else:

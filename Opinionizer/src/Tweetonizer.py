@@ -533,11 +533,11 @@ if __name__ == '__main__':
     randomizeTweets = False
     beginDate = datetime.today() - timedelta(1)
     endDate = datetime.today()     
-    politiciansFile = "../Resources/politicians.txt"
-    sentiTokensFile = "../Resources/sentiTokens-2011-05-30.txt"    
-    exceptSentiTokens = "../Resources/SentiLexAccentExcpt.txt"
-    multiWordsFile = "../Resources/multiwords.txt"
-    logFolder = "../Results/"
+    politiciansFile = "..\Resources\politicians.txt"
+    sentiTokensFile = "..\Resources\SentiLex-flex-PT03.txt"    
+    exceptSentiTokens = "..\Resources\SentiLexAccentExcpt.txt"
+    multiWordsFile = "..\Resources\multiwords.txt"
+    logFolder = "..\Results\\"
     singleSentence = None
     webOutput = False
     

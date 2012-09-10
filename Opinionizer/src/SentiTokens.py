@@ -163,8 +163,7 @@ def loadSentiTokens(path,pathExceptions):
                     if currentFlex not in exceptions and currentFlex != Utils.normalize(currentFlex):
                         
                         currentFlexions.append(Utils.normalize(currentFlex))
-            else:
-                print "rejected: ", line        
+                 
         except:
             None
     f.close()    
