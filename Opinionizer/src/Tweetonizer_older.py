@@ -11,16 +11,16 @@ import time
 import Persons 
 import SentiTokens
 from Opinionizers import Naive,Rules,MultiWordHandler
-import urllib2
-import urllib
+#import urllib2
+#import urllib
 import simplejson
 from Opinion import Opinion
 import codecs
+#import twitter
 import os
 import sys
 import Utils
 import random
-import json
 
 TARGET = 0
 N_TWEETS = 1
@@ -36,7 +36,7 @@ access_secret_prod = "tDms9BFzHAwhVmVoPbIpwdVblPHrAdxEsYJCzw4q1k"
 
 def usage(commandName):
     
-    print "usage: " + commandName + " [-pt (post to twitter and stats)|-ptr (post to twitter but randomize posts)|-pts (post stats only)|-pf (post to file)] [-pr=proxy] [-pol=politicians file] [-sent=sentiment tokens file] [-excpt=exception sentiment tokens file] [-mw=multiwords file] [-bd=begin date (yyyy-mm-dd)] [-ed=end date (yyyy-mm-dd)] [-rt=end date (yyyy-mm-dd hh:mm)|-rt (last hour)] [-ss=single sentence] [-ssw=single sentence and web output] [-log=log file] [-excpt=ex"
+    print "usage: " + commandName + " [-pt (post to twitter and stats)|-ptr (post to twitter but randomize posts)|-pts (post stats only)] [-pr=proxy] [-pol=politicians file] [-sent=sentiment tokens file] [-excpt=exception sentiment tokens file] [-mw=multiwords file] [-bd=begin date (yyyy-mm-dd)] [-ed=end date (yyyy-mm-dd)] [-ss=single sentence] [-ssw=single sentence and web output] [-log=log file] [-excpt=ex"
 
 def logClassifiedTweets(tweetsByTarget,path):
     
@@ -63,80 +63,9 @@ def logClassifiedTweets(tweetsByTarget,path):
     
     f.close()
 
-def logHourlyTweets(listOfTweets,logFolder,next,prev):
-    
-    """ Writes a hourly log (txt file) of tweets """
-    
-    print "Writting log of tweets: " + logFolder
-     
-    f = codecs.open(logFolder,"w","utf-8")
-    
-    #Column headers
-    aux = {}
-    aux[ "nrTweets" ] = len(listOfTweets)
-    aux[ "query" ] = ""
-    aux[ "endDate" ] = endDate.strftime("%Y-%m-%d %H:%M")
-    aux[ "beginDate" ] = beginDate.strftime("%Y-%m-%d %H:%M")
-    aux[ "prev" ] = prev
-    aux[ "next" ] = next
-    aux[ "tweets" ] = []
-    
-    for tweet in listOfTweets:
-
-        aux1 = {}
-
-        aux1["id"] = tweet.id
-        aux1["target"] = tweet.target.replace('\n',' ')
-        aux1["irony"] = tweet.irony
-        aux1["polarity"] = tweet.polarity
-        aux1["sentence"] = tweet.sentence.replace('|','\\').replace('\n',' ').replace('\t',' ').replace('\r',' ')
-        aux1["mention"] = tweet.mention.replace('\n',' ')
-        aux1["metadata"] = tweet.metadata.replace('\n',' ')
-        aux1["date"] = tweet.date.strftime("%Y-%m-%d %H:%M:%S")
-        aux1["user"] = tweet.user
-        aux1["taggedSentence"] = tweet.taggedSentence.replace('|','\\').replace('\n',' ').replace('\t',' ').replace('\r',' ') 
-
-        aux[ "tweets" ].append(aux1)
-
-    f.write( json.dumps( aux ) )
-    f.close()
-
 def postResults(stats,proxy,date):
-        
-    """ Posts the statistics via a webservice 
-        
-        Params: stats -> list of tuples(target,nTweets,nPositives,nNeutrals,nNegatives)
-                proxy -> proxy url 
-                date  -> results of date
-    """
-    print "\nPosting daily stats...\n"
     
-    username = "ome_user"
-    password = "ome_pass"
-    topLevelUrl = "http://robinson.fe.up.pt/cgi-bin/OpinionMiningElections/post_daily_results.pl"
-    postResultsUrl =  "http://robinson.fe.up.pt/cgi-bin/OpinionMiningElections/post_daily_results.pl?target={0}&source=twitter&pos={1}&neg={2}&neu={3}&version=baseline&date={4}"   
-    
-    password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
-    password_mgr.add_password(None, topLevelUrl, username, password)
-    authHandler = urllib2.HTTPBasicAuthHandler(password_mgr)
-    
-    opener = None
-    
-    if proxy != None:
-        proxyHandler = urllib2.ProxyHandler({'http': proxy})        
-        opener = urllib2.build_opener(proxyHandler,authHandler)
-    else:
-        opener = urllib2.build_opener(authHandler)
-    
-    for target in stats:
-        
-        normalizedTargetName = urllib.quote(Utils.normalize(unicode(target[TARGET])))
-        normalizedDate =  urllib.quote(date.strftime('%Y-%m-%d'))
-        print "posting results to: " + postResultsUrl.format(normalizedTargetName,target[POSITIVES],target[NEGATIVES],target[NEUTRALS],normalizedDate)
-        response = opener.open(postResultsUrl.format(normalizedTargetName,target[POSITIVES],target[NEGATIVES],target[NEUTRALS],normalizedDate))
-        time.sleep(5)
-        
-        print response.readlines()
+        print "1"
 
 def getStats(tweetsByTarget):
     
@@ -178,62 +107,7 @@ def getStats(tweetsByTarget):
 
 def getNewTweets(beginDate,endDate,proxy):
     
-    """
-        Gets tweets from a service for a certain period
-        Params: begin date 
-                end date
-                proxy
-                
-        Returns: list of Opinion instances
-    """
-    
-    print "Getting new tweets..."
-    
-    username = "twitter_crawl_user"
-    password = "twitter_crawl_pass"
-    top_level_url = "http://robinson.fe.up.pt/cgi-bin/twitter_crawl/get_tweets.pl"
-    requestTweets = "http://robinson.fe.up.pt/cgi-bin/twitter_crawl/get_tweets.pl?begin_date={0}&end_date={1}&format=JSON&limit=all"
-    #requestTweets = "http://robinson.fe.up.pt/cgi-bin/twitter_crawl/get_tweets.pl?begin_date=2011-04-10&end_date=2011-04-12%2001:00:00&format=JSON"
-    
-    #Password manager because the service requires authentication
-    password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
-    password_mgr.add_password(None, top_level_url, username, password)
-    auth_handler = urllib2.HTTPBasicAuthHandler(password_mgr)
-    opener = None
-    
-    if proxy != None:
-        proxy_handler = urllib2.ProxyHandler({'http': proxy})        
-        opener = urllib2.build_opener(auth_handler,proxy_handler)       
-    else:
-        opener = urllib2.build_opener(auth_handler)
-
-    if beginDate.strftime('%Y') == "1900":
-            print "Getting Tweets from STDIN ..."
-            twitterData = sys.stdin;
-    else:
-            print "Requesting: " + requestTweets.format(urllib.quote(beginDate.strftime('%Y-%m-%d %H:%M')),
-            urllib.quote(endDate.strftime('%Y-%m-%d %H:%M')))
-            twitterData = opener.open(requestTweets.format(urllib.quote(beginDate.strftime('%Y-%m-%d %H:%M')),
-            urllib.quote(endDate.strftime('%Y-%m-%d %H:%M'))));
-
-    #Read the JSON response
-    jsonTwitter = simplejson.loads(unicode(twitterData.read().decode("utf-8")))
-                                                
-    listOfTweets = []
-    
-    #Build a dictionary
-    for tweet in jsonTwitter["tweets"]:
-        
-        id = tweet["user_id"] + "_" + tweet["status_id"]
-        userId = unicode(tweet["user_id"])
-        #print userId
-        
-        date =  datetime.strptime(tweet["created_at"], '%Y-%m-%d %H:%M:%S')
-        
-        listOfTweets.append(Opinion(tweet["status_id"],unicode(tweet["text"]),user=userId,date=date))
-     
-    print len(listOfTweets), " tweets loaded\n"  
-    return listOfTweets
+    print "1"
 
 def printMessages(messages):
     
@@ -241,43 +115,9 @@ def printMessages(messages):
     
         print message
  
-def tweetResults(tweets,acessKey,acessSecrect,randomizeTweets,proxy):       
-    
-    """
-        Tweets the results in a twitter account
-        
-        Params: tweets -> list of tweet messages                
-                accessKey -> for oAuth authentication
-                accessSecret -> for oAuth authentication
-                randomizeTweets -> True if tweets need to have a random substring to avoid posting duplicates
-                proxy 
-    """
-    
-    print "Posting results to twitter...\n"
-    
-    consumer_key = "sEwbkfgkFU4B7l5DBuRvXw"
-    consumer_secret = "aUAKFq3qpB7NqeHh89AIJL85ZXHORlmZ7WIczLoxE"    
-    
-      
-    if proxy != None:
-        os.environ['HTTP_PROXY'] = proxy        
-        proxy_handler = urllib2.ProxyHandler({'http': proxy})    
-        opener = urllib2.build_opener(proxy_handler)
-        urllib2.install_opener(opener)    
-    
+def tweetResults(tweets,acessKey,acessSecrect,randomizeTweets,proxy):    
 
-    api = twitter.Api(consumer_key=consumer_key,
-                       consumer_secret=consumer_secret, access_token_key=acessKey, access_token_secret=acessSecrect)
-    
-    for tweetMessage in tweets:
-        
-        if randomizeTweets:            
-            randomizedTweet = tweetMessage +  " <" + str(random.random())[3:7] + ">"
-            print randomizedTweet, " ("+str(len(randomizedTweet))+")"
-            api.PostUpdate(randomizedTweet)   
-        else:
-            print tweetMessage, " ("+str(len(tweetMessage))+")"
-            api.PostUpdate(tweetMessage) 
+    print "1"
 
     
 def formatStats(stats,nTweets,beginDate,endDate):
@@ -396,40 +236,30 @@ def processTweets(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFi
 
 def processSingleSentence(politiciansFile,sentiTokensFile,exceptSentiTokens,sentence,webOutput):
             
-    print "Loading resources..."
-    print "Politicians: " + politiciansFile    
+    print "<br>Loading resources...<br>Politicians: " + politiciansFile    
     politicians = Persons.loadPoliticians(politiciansFile)
     
-    print "SentiTokens: " + sentiTokensFile 
-    print "ExceptTokens: " +  exceptSentiTokens
+    print "<br>SentiTokens: " + sentiTokensFile + "<br>ExceptTokens: " +  exceptSentiTokens
     sentiTokens = SentiTokens.loadSentiTokens(sentiTokensFile,exceptSentiTokens)
     
     naive = Naive(politicians,sentiTokens)
     
     singleSentence = Opinion(1, sentence=sentence)
-    
-    print "Inferring targets..."
     targets = naive.inferTarget(singleSentence)
-            
     results = []
+    
+    print "<br>Inferring targets...<br>"
         
     if targets != None:    
         
-        print "Inferring polarity..."
+        print "<br>Inferring polarity...<br>"
         
         for target in targets:
             
             rules = Rules(politicians,sentiTokens)
-            
-            #if not possible to classify with rules use the naive classifier
-            classifiedTweet = rules.inferPolarity(target, False)
-            
-            if classifiedTweet.polarity == 0:
-                classifiedTweet = naive.inferPolarity(classifiedTweet,True)
-            
-            results.append(classifiedTweet)
+            results.append(rules.inferPolarity(target, False))
     else:
-        print "No targets were identified..."
+        print "<br>No targets were identified...<br>"
     if webOutput:
         return printResultsWeb(results,sentence)
     else:
@@ -467,7 +297,7 @@ def printResultsWeb(results,sentence):
         
         print html.format(sentence,targets, str(results[0].polarity)).encode("utf-8")       
            
-def main(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,logFolder,beginDate,endDate,postTwitter,postStats,postFile,randomizeTweets,proxy,):       
+def main(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,logFolder,beginDate,endDate,postTwitter,postStats,randomizeTweets,proxy,):       
     
     listOfTweets = getNewTweets(beginDate,endDate,proxy)
     classifiedTweets = processTweets(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,listOfTweets)
@@ -488,56 +318,26 @@ def main(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,logFol
         #post statistcs for the charts
         postResults(stats,proxy,endDate)
             
-    elif postFile:
-        logHourlyTweets(listOfTweets,logFolder+"hourTweets_"+beginDate.strftime('%Y-%m-%d_%H-%M')+".txt","hourTweets_"+(beginDate+timedelta(hours=1)).strftime('%Y-%m-%d_%H-%M')+".txt","hourTweets_"+(beginDate-timedelta(hours=1)).strftime('%Y-%m-%d_%H-%M')+".txt")
-        logHourlyTweets(listOfTweets,logFolder+"hourTweets_lastHour.txt","hourTweets_"+(beginDate+timedelta(hours=1)).strftime('%Y-%m-%d_%H-%M')+".txt","hourTweets_"+(beginDate-timedelta(hours=1)).strftime('%Y-%m-%d_%H-%M')+".txt")
-
-        for target in ["ppcoelho","jseguro","pportas","flouca","jsousa"]:
-            try:
-                logHourlyTweets(classifiedTweets[target],logFolder+"hourTweets_"+target+"_"+beginDate.strftime('%Y-%m-%d_%H-%M')+".txt","hourTweets_"+target+"_"+(beginDate+timedelta(hours=1)).strftime('%Y-%m-%d_%H-%M')+".txt","hourTweets_"+target+"_"+(beginDate-timedelta(hours=1)).strftime('%Y-%m-%d_%H-%M')+".txt")
-                logHourlyTweets(classifiedTweets[target],logFolder+"hourTweets_"+target+"_lastHour.txt","hourTweets_"+target+"_"+(beginDate+timedelta(hours=1)).strftime('%Y-%m-%d_%H-%M')+".txt","hourTweets_"+target+"_"+(beginDate-timedelta(hours=1)).strftime('%Y-%m-%d_%H-%M')+".txt")
-            except KeyError:
-                logHourlyTweets([],logFolder+"hourTweets_"+target+"_"+beginDate.strftime('%Y-%m-%d_%H-%M')+".txt","hourTweets_"+target+"_"+(beginDate+timedelta(hours=1)).strftime('%Y-%m-%d_%H-%M')+".txt","hourTweets_"+target+"_"+(beginDate-timedelta(hours=1)).strftime('%Y-%m-%d_%H-%M')+".txt")
-                logHourlyTweets([],logFolder+"hourTweets_"+target+"_lastHour.txt","hourTweets_"+target+"_"+(beginDate+timedelta(hours=1)).strftime('%Y-%m-%d_%H-%M')+".txt","hourTweets_"+target+"_"+(beginDate-timedelta(hours=1)).strftime('%Y-%m-%d_%H-%M')+".txt")
-            
     else:
         printMessages(formatedStats)
     
     logFilename = logFolder + "tweets"+str(beginDate.month)+str(beginDate.day)+str(endDate.day)+".csv"
     logClassifiedTweets(classifiedTweets.itervalues(),logFilename)
 
-def testPerformanceSingleSentence():
-    
-    politiciansFile = "../Resources/politicians.txt"
-    sentiTokensFile = "../Resources/sentiTokens-2011-05-30.txt"    
-    exceptSentiTokens = "../Resources/SentiLexAccentExcpt.txt"
-    webOutput = False
-    
-    singleSentence = u"O pinócrates tem falta de maturidade e não é parvo"
-    
-    t0 = time.time()
-    processSingleSentence(politiciansFile, sentiTokensFile, exceptSentiTokens, singleSentence,webOutput)
-    t1 = time.time()
-    
-    print "\nDone in:" + str(t1-t0)
-    
 if __name__ == '__main__':   
     
-
     #Default values
     proxy = None
-    realTime = None
     postTwitter = False
     postStats = False
-    postFile = False
     randomizeTweets = False
     beginDate = datetime.today() - timedelta(1)
     endDate = datetime.today()     
-    politiciansFile = "..\Resources\politicians.txt"
-    sentiTokensFile = "..\Resources\SentiLex-flex-PT03.txt"    
-    exceptSentiTokens = "..\Resources\SentiLexAccentExcpt.txt"
-    multiWordsFile = "..\Resources\multiwords.txt"
-    logFolder = "..\Results\\"
+    politiciansFile = "../Resources/politicians.txt"
+    sentiTokensFile = "../Resources/sentiTokens-2011-05-30.txt"    
+    exceptSentiTokens = "../Resources/SentiLexAccentExcpt.txt"
+    multiWordsFile = "../Resources/multiwords.txt"
+    logFolder = "../Results/"
     singleSentence = None
     webOutput = False
     
@@ -563,10 +363,6 @@ if __name__ == '__main__':
                 logFolder = logFolder + "/"        
         elif param.startswith("-mw="):                     
             multiWordsFile = param.replace("-mw=","")
-        elif param.startswith("-rt="):
-            realTime = datetime.strptime(param.replace("-rt=",""), '%Y-%m-%d_%H:%M')
-        elif param.startswith("-rt"):
-            realTime = "lastHour"
         elif param.startswith("-ss="):                     
             singleSentence = unicode(param.replace("-ss=","").decode("utf-8"))
         elif param.startswith("-ssw="):                     
@@ -580,43 +376,22 @@ if __name__ == '__main__':
             postTwitter = True
             postStats = True        
         elif param == "-pts":            
-            postStats = True       
-        elif param == "-pf":            
-            postFile = True
+            postStats = True
         else:            
             print "Error! " + param
             usage(sys.argv[0])
-            sys.exit(-1)    
+            sys.exit(-1)
     
-    if realTime == "lastHour":
-        
-        print "Go!"
-        #Set the processing time frame to last hour of the current day
-        endDate = endDate.replace(minute=0,second=0,microsecond=0)
-        beginDate = endDate - timedelta(hours=1)
-        
-        main(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,logFolder,beginDate,endDate,postTwitter,postStats,postFile,randomizeTweets,proxy)
-        print "Done!"
-    
-    elif realTime != None:
-        
-        print "Go!"
-        #Set the processing time frame to 1 hour of the time given in rt
-        endDate = realTime
-        beginDate = endDate - timedelta(hours=1)
-        
-        main(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,logFolder,beginDate,endDate,postTwitter,postStats,postFile,randomizeTweets,proxy)
-        print "Done!"
-    
-    elif singleSentence == None:
+    if singleSentence == None:
         
         print "Go!"
         #Set the processing time frame between 19h16 of the previous day 19h15 of the current day
         beginDate = beginDate.replace(hour=19,minute=1,second=0,microsecond=0)
         endDate = endDate.replace(hour=19,minute=0,second=0,microsecond=0)
         
-        main(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,logFolder,beginDate,endDate,postTwitter,postStats,postFile,randomizeTweets,proxy)
+        main(politiciansFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,logFolder,beginDate,endDate,postTwitter,postStats,randomizeTweets,proxy)
         print "Done!"
     else:
         processSingleSentence(politiciansFile, sentiTokensFile, exceptSentiTokens, singleSentence,webOutput)
-
+                
+    

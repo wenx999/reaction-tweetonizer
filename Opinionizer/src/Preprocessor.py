@@ -1,28 +1,22 @@
 # -*- coding: UTF-8 -*-
 
 import re
+import unicodedata
+
+def normalize(s):
+    
+    """ Replace unicode chars with their ascii approximation
+        ex: ç -> c
+            ã,á,â -> a
+    """
+    
+    return (''.join((c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn'))).replace('-',' ')
 
 def removeURLs(sentence):
     
     regex = "(.?http://.+?)( |$)|(.?www\..+?)( |$)"
     
     return re.sub(regex," <URL> ",sentence)
-
-def removeUsernames(sentence):
-    
-    regex = ".?@.+?( |$)"
-    return re.sub(regex," <USER> ", sentence)
-
-def separateSpecialSymbols(sentence):
-    
-    symbols = [",","!",":",";",".","-","_","+","*","@","£","#","$","\"","%","&","(",")","/","<",">","[","]","^","{","}","|","'","~","?"]
-    
-    newSentence = sentence
-    
-    for s in symbols:
-        newSentence = newSentence.replace(s," "+s+" ")
-        
-    return newSentence
 
 def removeStopWords(sentence):
     
@@ -182,6 +176,23 @@ def removeStopWords(sentence):
         
     return newSentence
 
+
+
+def removeUsernames(sentence):
+    
+    regex = ".?@.+?( |$)"
+    return re.sub(regex," <USER> ", sentence)
+
+def separateSpecialSymbols(sentence):
+    
+    symbols = [",","!",":",";",".","-","_","+","*","@","£","#","$","\"","%","&","(",")","/","<",">","[","]","^","{","}","|","'","~","?"]
+    
+    newSentence = sentence
+    
+    for s in symbols:
+        newSentence = newSentence.replace(s," "+s+" ")
+        
+    return newSentence
     
 if __name__ == '__main__':
     

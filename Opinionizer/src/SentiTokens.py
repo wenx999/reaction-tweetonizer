@@ -8,6 +8,7 @@ Created on Apr 12, 2011
 import codecs
 import Utils
 import re
+import Preprocessor
 
 class SentiToken:
 
@@ -109,9 +110,9 @@ def loadSentiTokens(path,pathExceptions):
     currentFlexions = []
     currentFlexions.append(currentFlex)
     
-    if currentFlex not in exceptions and currentFlex != Utils.normalize(currentFlex):
+    if currentFlex not in exceptions and currentFlex != Preprocessor.normalize(currentFlex):
                         
-        currentFlexions.append(Utils.normalize(currentFlex))
+        currentFlexions.append(Preprocessor.normalize(currentFlex))
        
     for line in f:
         
@@ -123,9 +124,9 @@ def loadSentiTokens(path,pathExceptions):
                 
                 if lemma != currentLemma:            
                     
-                    if currentLemma not in exceptions and currentLemma != Utils.normalize(currentLemma):
+                    if currentLemma not in exceptions and currentLemma != Preprocessor.normalize(currentLemma):
                         
-                        currentFlexions.append(Utils.normalize(currentLemma))
+                        currentFlexions.append(Preprocessor.normalize(currentLemma))
                                 
                     adjectives.append(SentiToken(currentLemma,currentPolarity,currentPos,currentFlexions))
                                         
@@ -151,18 +152,18 @@ def loadSentiTokens(path,pathExceptions):
                     
                     #print "L:", currentLemma,"P:",currentPolarity,"POS:",currentPos,"F:",currentFlex
                     
-                    if currentFlex not in exceptions and currentFlex != Utils.normalize(currentFlex):
+                    if currentFlex not in exceptions and currentFlex != Preprocessor.normalize(currentFlex):
                         
-                        currentFlexions.append(Utils.normalize(currentFlex))
+                        currentFlexions.append(Preprocessor.normalize(currentFlex))
                     
                 else:   
                     currentFlex = re.search(flexRegex,line).group(1)
                     currentFlexions.append(currentFlex)
                     
                     #print "l:", lemma, "f:", currentFlex, "p:", currentPos
-                    if currentFlex not in exceptions and currentFlex != Utils.normalize(currentFlex):
+                    if currentFlex not in exceptions and currentFlex != Preprocessor.normalize(currentFlex):
                         
-                        currentFlexions.append(Utils.normalize(currentFlex))
+                        currentFlexions.append(Preprocessor.normalize(currentFlex))
                  
         except:
             None
@@ -214,14 +215,17 @@ if __name__ == "__main__":
     f = codecs.open("res.txt","w","utf-8")
     
     sentiTokens = loadSentiTokens("../Resources/SentiLex-flex-PT03.txt","../Resources/SentiLexAccentExcpt.txt")
-    """    
+    
+     
     for a in sentiTokens:
         
         None
         print "-----------------------"
-        print a.tostring().encode("utf-8")        
+        print a.tostring().encode("utf-8") 
+        print ">>"
+        print a.getTokens()       
     
-    """
+    
     print len(sentiTokens)
     f.close()
  

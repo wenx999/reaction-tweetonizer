@@ -1,7 +1,6 @@
 # -*- coding: UTF-8 -*-
-
 '''
-Created on Apr 21, 2011
+Created on Sep 11, 2012
 
 @author: samir
 '''
@@ -14,6 +13,8 @@ from NaiveClassifier import Naive
 from RulesClassifier import Rules
 from TargetDetector import TargetDetector
 from Opinion import Opinion
+import Preprocessor
+import operator
 
 from datetime import datetime,timedelta
 import time
@@ -52,7 +53,7 @@ MENTION = 3
 PPC = 5
 TEXT = 7
 """
-debug = False
+debug = True
     
 
 def usage(commandName):
@@ -162,83 +163,8 @@ def getStats(tweetsByTarget):
         
     return stats
 
-def getNewTweets_old(beginDate,endDate,proxy):
-    
-    """
-        Gets tweets from a service for a certain period
-        Params: begin date 
-                end date
-                proxy
-    
-        Returns: list of Opinion instances
-    """
-    
-    print "Getting new tweets..."
-    
-    #username = "twitter_crawl_user"
-    #password = "twitter_crawl_pass"
-    requestTweets = "http://pattie.fe.up.pt/solr/eurocopa/select?q=created_at:[{0}%20TO%20{1}]&indent=on&wt=json&rows={2}&fl=text,id,created_at,user_id"
-    #requestTweets = "http://pattie.fe.up.pt/solr/portugal/select?q=created_at:[2012-05-25T13:00:00Z%20TO%202012-05-25T15:00:00Z]&indent=on&wt=json&rows=1000&fl=text,id,created_at,user_id"
-    
-    #Password manager because the service requires authentication
-    #password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
-    #password_mgr.add_password(None, top_level_url, username, password)
-    #auth_handler = urllib2.HTTPBasicAuthHandler(password_mgr)
-    opener = None   
-    
-    if proxy != None:
-        proxy_handler = urllib2.ProxyHandler({'http': proxy})        
-        #opener = urllib2.build_opener(auth_handler,proxy_handler)
-        opener = urllib2.build_opener(proxy_handler)       
-    else:
-        #opener = urllib2.build_opener(auth_handler)
-        opener = urllib2.build_opener()
-    
-    if beginDate.strftime('%Y') == "1900":
-       
-        print "Getting Tweets from STDIN ..."
-        twitterData = sys.stdin;
-        
-    else:
-        #First we need to know how many tweets match our query (so we can retrieve them all
-        #at once
-        request = requestTweets.format(urllib.quote(beginDate.strftime('%Y-%m-%dT%H:%M:%SZ')),
-                                       urllib.quote(endDate.strftime('%Y-%m-%dT%H:%M:%SZ')),
-                                       1)        
-        
-        data = opener.open(request)
-        
-        numOfTweets = simplejson.loads(unicode(data.read().decode("utf-8")))["response"]["numFound"]
-        
-        #now we know how many rows to ask..
-        request = requestTweets.format(urllib.quote(beginDate.strftime('%Y-%m-%dT%H:%M:%SZ')),
-                                       urllib.quote(endDate.strftime('%Y-%m-%dT%H:%M:%SZ')),
-                                       numOfTweets)
-        
-        print "Requesting: " + request
-        
-        twitterData = opener.open(request)
-        
-    #Read the JSON response
-    jsonTwitter = simplejson.loads(unicode(twitterData.read().decode("utf-8")))  
-                                
-    listOfTweets = []
-    
-    #Build a dictionary
-    for tweet in jsonTwitter["response"]["docs"]:
-    
-        date =  datetime.strptime(tweet["created_at"], '%Y-%m-%dT%H:%M:%Sz')
-        
-        listOfTweets.append(Opinion(tweet["id"],
-                                    unicode(tweet["text"]),
-                                    user=unicode(tweet["user_id"]),
-                                    date=date))
-    
-    print len(listOfTweets), " tweets loaded\n"  
-   
-    return listOfTweets
 
-def getNewTweets(beginDate,endDate):
+def getComments(beginDate,endDate):
     
     """
         Gets tweets from a service for a certain period
@@ -251,37 +177,37 @@ def getNewTweets(beginDate,endDate):
     print "Getting new tweets..."
 
     #requestTweets = "http://pattie.fe.up.pt/solr/portuguese/select/?q=created_at:[2012-09-06T00:00:00Z%20TO%202012-09-10T00:00:00Z]&indent=on&wt=json&rows=10&fl=text,id,created_at,user_id"
-    requestTweets = "http://pattie.fe.up.pt/solr/portuguese/select/?q=created_at:[{0}%20TO%20{1}]&indent=on&wt=json&rows=10000000&fl=text,id,created_at,user_id"   
+    #requestMessages = "http://pattie.fe.up.pt/solr/facebook/select/?q=*%3A*&wt=json&rows=10000000"   
+    requestMessages = "http://pattie.fe.up.pt/solr/facebook/select/?q=*%3A*&wt=json&rows=15"
     
     opener = urllib2.build_opener()
             
-    request = requestTweets.format(urllib.quote(beginDate.strftime('%Y-%m-%dT%H:%M:%SZ')),
+    request = requestMessages.format(urllib.quote(beginDate.strftime('%Y-%m-%dT%H:%M:%SZ')),
                                    urllib.quote(endDate.strftime('%Y-%m-%dT%H:%M:%SZ')))
              
     print "Requesting: " + request
     
-    twitterData = opener.open(request)
+    data = opener.open(request)
         
     #Read the JSON response
-    jsonTwitter = simplejson.loads(unicode(twitterData.read().decode("utf-8")))  
+    jsonResponse = simplejson.loads(unicode(data.read().decode("utf-8")))  
                                 
-    listOfTweets = []
+    listOfMessages = []
     i = 0
     
-    for tweet in jsonTwitter["response"]["docs"]:
+    for message in jsonResponse["response"]["docs"]:
         
         i+=1
-            
-        date =  datetime.strptime(tweet["created_at"], '%Y-%m-%dT%H:%M:%SZ')
+        print message
+        #date =  datetime.strptime(message["timestamp"], '%Y-%m-%dT%H:%M:%S.%fZ')
          
-        listOfTweets.append(Opinion(tweet["id"],
-                                    unicode(tweet["text"]),
-                                    user=unicode(tweet["user_id"]),         
-                                    date=date))
+        listOfMessages.append(Opinion(message["id"],
+                                    unicode(message["text"]),
+                                    user=unicode(message["user_id"])))
                     
-    print len(listOfTweets), " tweets (of "+ str(i) + ") loaded\n"  
+    print len(listOfMessages), " messages (of "+ str(i) + ") loaded\n"  
    
-    return listOfTweets
+    return listOfMessages
     
 def formatStats(stats,nTweets,beginDate,endDate):
     
@@ -324,7 +250,7 @@ def formatStats(stats,nTweets,beginDate,endDate):
     
     return tweetMessages
 
-def processTweets(targetsFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,tweets):
+def processComments(sentiTokensFile,exceptSentiTokens,multiWordsFile,messages):
     
     """ 
         Processes a list of tweets, for each:
@@ -338,17 +264,8 @@ def processTweets(targetsFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,t
         multiWordsFile -> path to a file that contains the words that should be considered as a unit, e.g. "primeiro ministro"
          tweets -> list of tweets
     """
-    
-    print "hell yeah!"
-    print "Loading resources...\nTargets: " + targetsFile
         
-    targets = Utils.getFromCache(PERSONS_CACHE)
-    
-    if targets != None:
-        print "Target list found on cache!"
-    else:
-        targets = Persons.loadPoliticians(targetsFile)
-        Utils.putInCache(targets, PERSONS_CACHE) 
+    print "Loading resources..."
     
     print "SentiTokens: " + sentiTokensFile + "\nExceptTokens: " +  exceptSentiTokens
     
@@ -367,74 +284,68 @@ def processTweets(targetsFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,t
     if multiWordTokenizer != None:
         print "Multiword Tokenizer found on cache"
     else:
-        multiWordTokenizer = MultiWordHelper(multiWordsFile)
-        multiWordTokenizer.addMultiWords(Persons.getMultiWords(targets))
+        multiWordTokenizer = MultiWordHelper(multiWordsFile)        
         multiWordTokenizer.addMultiWords(SentiTokens.getMultiWords(sentiTokens))
         Utils.putInCache(multiWordTokenizer, MULTIWORD_CACHE)
     
     print "Resources loaded! Starting analysis..."
     
     
-    targetDetector = TargetDetector(targets)
-    #TODO:Estes senhores já não precisam de receber os targets
     naive = Naive(sentiTokens)
-    rules = Rules(None,sentiTokens)   
+    #rules = Rules(None,sentiTokens)   
     
-    analyzedTweets = []
-    rejectedTweets = []
+    positiveTokens = {}
+    negativeTokens = {}
     
-    for tweet in tweets:
+    for message in messages:
         
-        t0 = datetime.now()
+        #t0 = datetime.now()
+        tokens = naive.getSentiTokens(message, True)
         
-        tweetsWithTarget = targetDetector.inferTarget(tweet)
-        
-        if tweetsWithTarget != None :
+        for token in tokens[0]:
             
-            #a tweet can have multiple targets (in that case the message is replicated)
-            for tweet in tweetsWithTarget:       
+            if token not in positiveTokens:
+                positiveTokens[token] = 1
+            else:
+                positiveTokens[token] += 1
         
-                #try to classify with rules...
-                analyzedTweet = rules.inferPolarity(tweet,False)
-                
-                #if not possible use the naive classifier
-                if analyzedTweet.polarity == 0:
-                    analyzedTweet = naive.inferPolarity(analyzedTweet,False)
-                
-                #If the polarity is still 0 it can mean:
-                #1) The sum of the polarities of the sentiTokens is 0,
-                #2) There was no evidence usable to assess the sentiment                
-                if analyzedTweet.polarity == 0:
-                    
-                    regex = ur'(\W|^)sentiTokens:(.*?);(\W|$)'            
-                    
-                    #Try to find if there are any evidence of matched sentiTokens
-                    match = re.search(regex,analyzedTweet.metadata).group(2)
-                    
-                    if debug:
-                        print "match: ", match
-                    
-                    if len(match.strip(' ')) == 0:
+        for token in tokens[1]:
+            
+            if token not in negativeTokens:
+                negativeTokens[token] = 1
+            else:
+                negativeTokens[token] += 1
         
-                        rejectedTweets.append(analyzedTweet)
-                    else:
-                        analyzedTweets.append(analyzedTweet)
-                else:
-                    analyzedTweets.append(analyzedTweet)
-                
-                t1 = datetime.now()
-            
-                print tweet.id + " ("+ str(t1-t0) + ")"
-            
-    logClassifiedTweets(rejectedTweets, "./rejectedTweets.csv")    
+        if debug:
+            print message.sentence
+            print "positive: ",tokens[0]
+            print "negative: ",tokens[1]
+            print "\n------------------\n"
     
-    return analyzedTweets    
+    #writeResults(positiveTokens,"./positive.csv")
+    #writeResults(negativeTokens,"./negative.csv")
+    print "done!"
+    
+def writeResults(tokens,filename):       
+    
+    f = codecs.open(filename, "w", "utf-8")
+    
+    sortedTokens = sorted(tokens.iteritems(), key=operator.itemgetter(1),reverse=True)
+    
+    for s in sortedTokens:
+        f.write(s[0])
+        f.write(",")
+        f.write(str(s[1]))
+        f.write("\n")
+    
+    f.close()
            
 def main(targetsFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,logFolder,beginDate,endDate,post):       
     
-    listOfTweets = getNewTweets(beginDate,endDate)
-    processedTweets = processTweets(targetsFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,listOfTweets)
-    
+    listOfMessages = getComments(beginDate,endDate)
+    processedTweets = processComments(sentiTokensFile,exceptSentiTokens,multiWordsFile,listOfMessages)
+    print "OK"
+    return
     logFilename = logFolder + "tweets"+str(beginDate.month)+str(beginDate.day)+str(endDate.day)+".csv"
     logClassifiedTweets(processedTweets,logFilename)
             
