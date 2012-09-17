@@ -19,10 +19,59 @@ import sys
 import urllib
 import simplejson
 from datetime import datetime,timedelta
-import Opinionizers
 import Preprocessor
 import Persons
 import SentiTokens
+import csv
+import operator
+
+def testCSVReader():
+    
+    fileName = "../../titulos.csv"
+    csvfile = open(fileName, "rb")
+    dialect = csv.Sniffer().sniff(csvfile.read(1024))
+    csvfile.seek(0)
+    reader = csv.reader(csvfile, dialect)
+    
+    for line in reader:
+        
+        print line
+        
+        
+
+
+def countSentiTokens(inputFile,outputFile):
+        
+    f = codecs.open(inputFile, "r", "utf-8")
+    
+    text = f.read().split('\n')
+    
+    tokens = {}
+    
+    for token in text:
+        
+        normToken = token.lower()
+        
+        if normToken not in tokens:
+            tokens[normToken] = 1
+        else:
+            tokens[normToken] += 1
+            
+    writeResults(tokens,outputFile)
+    
+def writeResults(tokens,filename):       
+    
+    f = codecs.open(filename, "w", "utf-8")
+    
+    sortedTokens = sorted(tokens.iteritems(), key=operator.itemgetter(1),reverse=True)
+    
+    for s in sortedTokens:
+        f.write(s[0])
+        f.write(",")
+        f.write(str(s[1]))
+        f.write("\n")
+    
+    f.close()
 
 def testFindSenti():
     
@@ -433,8 +482,8 @@ if __name__ == '__main__':
     
     print "GOOO!"
     
-    testFindSenti()
     
+    countSentiTokens('./concord-intransitivos-positivos2.csv','./newPositives.csv')
     
     """
     print isNewsSource("aquelas manbos ")

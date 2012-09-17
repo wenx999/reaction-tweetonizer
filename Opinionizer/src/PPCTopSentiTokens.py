@@ -53,9 +53,8 @@ MENTION = 3
 PPC = 5
 TEXT = 7
 """
-debug = True
+debug = False
     
-
 def usage(commandName):
     
     print "usage: " + commandName + " [-pt (post to twitter and stats)|-ptr (post to twitter but randomize posts)|-pts (post stats only)|-pf (post to file)] [-tgt=targets file] [-sent=sentiment tokens file] [-excpt=exception sentiment tokens file] [-mw=multiwords file] [-bd=begin date (yyyy-mm-dd)] [-ed=end date (yyyy-mm-dd)] [-log=log file] [-excpt=sentilex accent exceptions file]"
@@ -177,8 +176,8 @@ def getComments(beginDate,endDate):
     print "Getting new tweets..."
 
     #requestTweets = "http://pattie.fe.up.pt/solr/portuguese/select/?q=created_at:[2012-09-06T00:00:00Z%20TO%202012-09-10T00:00:00Z]&indent=on&wt=json&rows=10&fl=text,id,created_at,user_id"
-    #requestMessages = "http://pattie.fe.up.pt/solr/facebook/select/?q=*%3A*&wt=json&rows=10000000"   
-    requestMessages = "http://pattie.fe.up.pt/solr/facebook/select/?q=*%3A*&wt=json&rows=15"
+    requestMessages = "http://pattie.fe.up.pt/solr/facebook/select/?q=in_reply_to_object_id:10151223717932292&sort=timestamp%20desc&wt=json&rows=1000000&fl=text,id,created_at,user_id"
+    #requestMessages = "http://pattie.fe.up.pt/solr/facebook/select/?q=in_reply_to_object_id:10151223717932292&sort=timestamp%20desc&wt=json&rows=10&fl=text,id,created_at,user_id"
     
     opener = urllib2.build_opener()
             
@@ -198,7 +197,8 @@ def getComments(beginDate,endDate):
     for message in jsonResponse["response"]["docs"]:
         
         i+=1
-        print message
+        if debug:
+            print message
         #date =  datetime.strptime(message["timestamp"], '%Y-%m-%dT%H:%M:%S.%fZ')
          
         listOfMessages.append(Opinion(message["id"],
@@ -264,6 +264,9 @@ def processComments(sentiTokensFile,exceptSentiTokens,multiWordsFile,messages):
         multiWordsFile -> path to a file that contains the words that should be considered as a unit, e.g. "primeiro ministro"
          tweets -> list of tweets
     """
+    
+    if debug:
+        print "DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG \n\n"
         
     print "Loading resources..."
     
@@ -293,15 +296,19 @@ def processComments(sentiTokensFile,exceptSentiTokens,multiWordsFile,messages):
     
     naive = Naive(sentiTokens)
     #rules = Rules(None,sentiTokens)   
+    rows = 0
     
     positiveTokens = {}
     negativeTokens = {}
-    
+           
     for message in messages:
         
-        #t0 = datetime.now()
-        tokens = naive.getSentiTokens(message, True)
+        rows +=1
         
+        t0 = datetime.now()
+        
+        tokens = naive.tokenizeSentiTokens(message, True)
+                
         for token in tokens[0]:
             
             if token not in positiveTokens:
@@ -316,16 +323,97 @@ def processComments(sentiTokensFile,exceptSentiTokens,multiWordsFile,messages):
             else:
                 negativeTokens[token] += 1
         
+        if rows%1000 == 0 and rows !=0:
+            
+            writeResults(positiveTokens,"./positive"+str(rows)+".csv")
+            writeResults(negativeTokens,"./negative"+str(rows)+".csv")
+            
         if debug:
+            t1 = datetime.now()
+            print "Time: "+ str(t1-t0)
             print message.sentence
             print "positive: ",tokens[0]
             print "negative: ",tokens[1]
             print "\n------------------\n"
     
-    #writeResults(positiveTokens,"./positive.csv")
-    #writeResults(negativeTokens,"./negative.csv")
+    writeResults(positiveTokens,"./positive.csv")
+    writeResults(negativeTokens,"./negative.csv")
     print "done!"
+
+def buildSentiQuickRef(sentiTokens):
     
+    quickRef = {}
+    
+    for sentiToken in sentiTokens:
+        
+        for flex in sentiToken.flexions:
+            quickRef[flex] = sentiToken
+    
+    return quickRef
+    
+def countSentiTokens(inputFile,outputFile):
+        
+    f = codecs.open(inputFile, "r", "utf-8")
+    
+    text = f.read().split('\n')
+    
+    sentiTokens = Utils.getFromCache(SENTI_CACHE)
+    quickRef = buildSentiQuickRef(sentiTokens)
+    #{lemma,(freq,[flex1,...,flexN])
+    tokens = {}
+    
+    for token in text:
+        
+        try:
+            sentiToken = quickRef[token.lower()]
+        except KeyError:
+            continue                
+        
+        lemma = sentiToken.lemma
+        #normToken = token.lower()
+        
+        if lemma not in tokens:
+            
+            tokens[lemma] = 1
+        else:
+            tokens[lemma] += 1       
+    
+    writeResults2(tokens,outputFile,quickRef)
+
+def generateCorpusFromComments(listOfMessages,filename):
+    
+    f = codecs.open(filename, "w", "utf-16-le")
+    
+    for message in listOfMessages:
+        
+        f.write(message.sentence)
+        f.write("\n")
+    
+    f.close()
+
+
+def writeResults2(tokens,filename,quickRef):       
+    
+    f = codecs.open(filename, "w", "utf-8")
+    
+    sortedTokens = sorted(tokens.iteritems(), key=operator.itemgetter(1),reverse=True)
+    
+    for s in sortedTokens:
+        f.write(s[0])
+        f.write(",")
+        f.write(str(s[1]))
+        f.write(",")
+        try: 
+            flexions = quickRef[s[0]].flexions                
+            for fl in flexions:
+                f.write(fl)
+                f.write(';')
+        except KeyError:
+            None
+        f.write("\n")
+    
+    f.close()    
+        
 def writeResults(tokens,filename):       
     
     f = codecs.open(filename, "w", "utf-8")
@@ -341,17 +429,24 @@ def writeResults(tokens,filename):
     f.close()
            
 def main(targetsFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,logFolder,beginDate,endDate,post):       
+        
+    countSentiTokens('./concord-intransitivos-positivos2.csv','newPositives.csv')
+    countSentiTokens('./concord-intransitivos-negativos2.csv','newNegatives.csv')
     
-    listOfMessages = getComments(beginDate,endDate)
-    processedTweets = processComments(sentiTokensFile,exceptSentiTokens,multiWordsFile,listOfMessages)
+    #listOfMessages = getComments(beginDate,endDate)
+    #generateCorpusFromComments(listOfMessages,'corpusComments2.txt')
+    #processedTweets = processComments(sentiTokensFile,exceptSentiTokens,multiWordsFile,listOfMessages)
+    
     print "OK"
     return
-    logFilename = logFolder + "tweets"+str(beginDate.month)+str(beginDate.day)+str(endDate.day)+".csv"
-    logClassifiedTweets(processedTweets,logFilename)
+    
+    #logFilename = logFolder + "tweets"+str(beginDate.month)+str(beginDate.day)+str(endDate.day)+".csv"
+    #logClassifiedTweets(processedTweets,logFilename)
             
     if post:
         #post statistcs for the charts
-        postResults(processedTweets)
+        #postResults(processedTweets)
+        None
     
 if __name__ == '__main__':   
     

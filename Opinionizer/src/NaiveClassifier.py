@@ -33,7 +33,8 @@ class Naive:
         buff.write(u'')
         
         #regexTemplate = ur"(?:\W|^){0}(?:\W|$)|"
-        regexTemplate = ur"(?:\W+|^){0}(?:\W+|$)|"        
+        regexTemplate = ur"(?:\W+|^){0}(?:\W+|$)|"
+        #regexTemplate = ur"\W+{0}\W+|"        
                         
         buff = StringIO.StringIO()
                  
@@ -258,8 +259,8 @@ class Naive:
                             
         return (positiveTokens,negativeTokens)
     
-    def getSentiTokens(self,opinion,useProcessedSentence):        
-        
+    def getSentiTokens(self,opinion,useProcessedSentence): 
+    
         """ 
             Tries to identify the polarity of a sentence
             Params: opinion -> Opinion object
@@ -293,6 +294,49 @@ class Naive:
                         if adj.polarity == str(-1):
                             negativeTokens.append(token)
                         elif adj.polarity == str(1):
-                            positiveTokens.append(token)                       
+                            positiveTokens.append(token)
+                        break                       
+                            
+        return (positiveTokens,negativeTokens)
+    
+    def tokenizeSentiTokens(self,opinion,useProcessedSentence): 
+    
+        """ 
+            Tries to identify the polarity of a sentence
+            Params: opinion -> Opinion object
+                    useProcessedSentence -> True to use the tagged (and tokenized) version of the sentence
+            Returns: tuple(inferred polarity, algorithm metadata)
+        """
+        #info = opinion.metadata + "; " + u'sentiTokens:'       
+        specialChars = u' “”\"@)(!#;&:\\@/-_,?.«»\' ' 
+        
+        if useProcessedSentence:
+            sentence = opinion.processedSentence.lower()
+        else:
+            sentence = opinion.sentence.lower()
+        
+        negativeTokens = []
+        positiveTokens = []
+        
+        splitter = re.compile(r'(\s+|\S+)')
+        
+        matches = splitter.findall(sentence)        
+                 
+        if matches != None and len(matches) > 0:     
+            
+            for match in matches:
+                
+                token = match.rstrip(specialChars).lstrip(specialChars)                
+                
+                for adj in self.sentiTokens:
+                    
+                    if adj.isMatch(token):
+                        if debug:
+                            print "M)", match, " -> T)", token, " -> L)", adj.lemma                         
+                        if adj.polarity == str(-1):
+                            negativeTokens.append(token)
+                        elif adj.polarity == str(1):
+                            positiveTokens.append(token)
+                        break                       
                             
         return (positiveTokens,negativeTokens)
