@@ -354,7 +354,7 @@ def buildSentiQuickRef(sentiTokens):
     
 def countSentiTokens(inputFile,outputFile):
     
-    exclude = ['sao','são','bom','bem','ganhar']
+    exclude = ['são','bom','bem','rico','verdadeiro','certo','falta']
         
     f = codecs.open(inputFile, "r", "utf-8")
     
@@ -375,7 +375,8 @@ def countSentiTokens(inputFile,outputFile):
         lemma = sentiToken.lemma
         #normToken = token.lower()
         
-        if lemma not in exclude:
+        
+        if lemma not in exclude and sentiToken.pos != 'v':
             #TODO:Comment this part of the code
             if lemma not in flexes:
                 flexes[lemma] = {}

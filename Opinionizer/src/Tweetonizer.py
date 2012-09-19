@@ -433,15 +433,19 @@ def processTweets(targetsFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,t
 def main(targetsFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,logFolder,beginDate,endDate,post):       
     
     listOfTweets = getNewTweets(beginDate,endDate)
-    processedTweets = processTweets(targetsFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,listOfTweets)
     
-    logFilename = logFolder + "tweets"+str(beginDate.month)+str(beginDate.day)+str(endDate.day)+".csv"
-    logClassifiedTweets(processedTweets,logFilename)
+    if len(listOfTweets) > 0:
+        processedTweets = processTweets(targetsFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,listOfTweets)
+    
+        logFilename = logFolder + "tweets"+str(beginDate.month)+str(beginDate.day)+str(endDate.day)+".csv"
+        logClassifiedTweets(processedTweets,logFilename)
             
-    if post:
-        #post statistcs for the charts
-        postResults(processedTweets)
-    
+        if post:
+            #post statistcs for the charts
+            postResults(processedTweets)
+    else:
+        print "found no tweets"
+        
 if __name__ == '__main__':   
     
     #Default values    

@@ -24,6 +24,52 @@ import Persons
 import SentiTokens
 import csv
 import operator
+import sqlite3 as lite
+
+def createTables():
+    
+    politician = """
+                DROP TABLE IF EXISTS politician;
+                CREATE TABLE IF NOT EXISTS politician (
+                  id INTEGER PRIMARY KEY,
+                  name varchar(256) NOT NULL,
+                  uri varchar(256) NOT NULL
+                ) ;
+        """
+    
+    politician_ec = """
+                    DROP TABLE IF EXISTS politician_ec;
+                    CREATE TABLE IF NOT EXISTS politician_ec (
+                      id INTEGER PRIMARY KEY,
+                      nameEC float NOT NULL                      
+                    ); 
+    """
+    
+    
+    
+    con = lite.connect('test.db')
+
+    with con:
+        
+        cur = con.cursor()    
+        cur.executescript(politician)
+
+def testSQLite():
+    
+    con = lite.connect('test.db')
+
+    with con:
+        
+        cur = con.cursor()    
+        cur.execute("CREATE TABLE Cars(Id INT, Name TEXT, Price INT)")
+        cur.execute("INSERT INTO Cars VALUES(1,'Audi',52642)")
+        cur.execute("INSERT INTO Cars VALUES(2,'Mercedes',57127)")
+        cur.execute("INSERT INTO Cars VALUES(3,'Skoda',9000)")
+        cur.execute("INSERT INTO Cars VALUES(4,'Volvo',29000)")
+        cur.execute("INSERT INTO Cars VALUES(5,'Bentley',350000)")
+        cur.execute("INSERT INTO Cars VALUES(6,'Citroen',21000)")
+        cur.execute("INSERT INTO Cars VALUES(7,'Hummer',41400)")
+        cur.execute("INSERT INTO Cars VALUES(8,'Volkswagen',21600)")
 
 def testCSVReader():
     
@@ -482,20 +528,9 @@ if __name__ == '__main__':
     
     print "GOOO!"
     
-    
-    countSentiTokens('./concord-intransitivos-positivos2.csv','./newPositives.csv')
-    
-    """
-    print isNewsSource("aquelas manbos ")
-    print isNewsSource("aquelas manbos #publico coiso")
-    print isNewsSource("aquelas manbos @jn cenas")
-    print isNewsSource("(diarionoticias) aquelas manbos cenas")
-    print isNewsSource(" [publico] aquelas manbos cenas")
+    createTables()
+    #testSQLite()
+    #countSentiTokens('./concord-intransitivos-positivos2.csv','./newPositives.csv')
     
     
-    a = newGetTweets(datetime(year=2011,month=1,day=1),datetime.now(),None)
-    
-    for b in a:
-        print b.tostring() + "\n\n"
-    """
     print "Done!"
