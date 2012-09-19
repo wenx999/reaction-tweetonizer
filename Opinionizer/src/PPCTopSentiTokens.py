@@ -24,6 +24,7 @@ import simplejson
 import codecs
 import sys
 import re
+import random
 
 
 TARGET = 0
@@ -347,38 +348,52 @@ def buildSentiQuickRef(sentiTokens):
     for sentiToken in sentiTokens:
         
         for flex in sentiToken.flexions:
-            quickRef[flex] = sentiToken
+            quickRef[flex] = [sentiToken,[]]
     
     return quickRef
     
 def countSentiTokens(inputFile,outputFile):
+    
+    exclude = ['sao','são','bom','bem','ganhar']
         
     f = codecs.open(inputFile, "r", "utf-8")
     
-    text = f.read().split('\n')
+    text = f.read().lower().split('\n')
     
     sentiTokens = Utils.getFromCache(SENTI_CACHE)
     quickRef = buildSentiQuickRef(sentiTokens)
     #{lemma,(freq,[flex1,...,flexN])
     tokens = {}
+    flexes = {}
     
     for token in text:
-        
         try:
-            sentiToken = quickRef[token.lower()]
+            sentiToken = quickRef[token][0]
         except KeyError:
             continue                
         
         lemma = sentiToken.lemma
         #normToken = token.lower()
         
-        if lemma not in tokens:
+        if lemma not in exclude:
+            #TODO:Comment this part of the code
+            if lemma not in flexes:
+                flexes[lemma] = {}
+                
+            flexes[lemma][token] =''
             
-            tokens[lemma] = 1
-        else:
-            tokens[lemma] += 1       
+            """
+            if token not in quickRef[token][1]:
+                print token 
+                quickRef[token][1].push(token)
+            """
+            if lemma not in tokens:
+                
+                tokens[lemma] = 1
+            else:
+                tokens[lemma] += 1       
     
-    writeResults2(tokens,outputFile,quickRef)
+    writeResults2(tokens,outputFile,quickRef,flexes)
 
 def generateCorpusFromComments(listOfMessages,filename):
     
@@ -392,20 +407,23 @@ def generateCorpusFromComments(listOfMessages,filename):
     f.close()
 
 
-def writeResults2(tokens,filename,quickRef):       
+def writeResults2(tokens,filename,quickRef,flexes):       
     
     f = codecs.open(filename, "w", "utf-8")
     
     sortedTokens = sorted(tokens.iteritems(), key=operator.itemgetter(1),reverse=True)
-    
+    history = []
     for s in sortedTokens:
         f.write(s[0])
         f.write(",")
         f.write(str(s[1]))
         f.write(",")
         try: 
-            flexions = quickRef[s[0]].flexions                
+            #print quickRef[s[0]]
+            flexions = flexes[s[0]].iterkeys()                
             for fl in flexions:
+                #if fl not in history:
+                history.append(fl)
                 f.write(fl)
                 f.write(';')
         except KeyError:
@@ -430,8 +448,9 @@ def writeResults(tokens,filename):
            
 def main(targetsFile,sentiTokensFile,exceptSentiTokens,multiWordsFile,logFolder,beginDate,endDate,post):       
         
-    countSentiTokens('./concord-intransitivos-positivos2.csv','newPositives.csv')
-    countSentiTokens('./concord-intransitivos-negativos2.csv','newNegatives.csv')
+    countSentiTokens('./concord-positivos-basica.csv','newPositives.csv')
+    countSentiTokens('./concord-negativos-basica.csv','newNegatives.csv')
+    #countSentiTokens('./concord-intransitivos-negativos2.csv','newNegatives.csv')
     
     #listOfMessages = getComments(beginDate,endDate)
     #generateCorpusFromComments(listOfMessages,'corpusComments2.txt')

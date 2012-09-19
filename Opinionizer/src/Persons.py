@@ -7,7 +7,7 @@ Created on Apr 12, 2011
 '''
 
 import codecs
-import Utils
+import Preprocessor
 
 debug = False
 
@@ -142,8 +142,8 @@ def loadTargetsFromFile(filename):
                     if cleanName != '':
                         if cleanName[0] != '^':
                             names.append(cleanName)
-                            if cleanName != Utils.normalize(cleanName): 
-                                names.append(Utils.normalize(cleanName))
+                            if cleanName != Preprocessor.normalize(cleanName): 
+                                names.append(Preprocessor.normalize(cleanName))
                                 if debug: print "appended clean name", cleanName
 
                         else:
@@ -166,9 +166,9 @@ def loadTargetsFromFile(filename):
                     if cleanName != '':
                         if cleanName[0] != '^':
                             nicknames.append(cleanName)
-                            if cleanName != Utils.normalize(cleanName): 
-                                nicknames.append(Utils.normalize(cleanName))
-                                if debug: print "appended clean nickname", cleanName, Utils.normalize(cleanName)
+                            if cleanName != Preprocessor.normalize(cleanName): 
+                                nicknames.append(Preprocessor.normalize(cleanName))
+                                if debug: print "appended clean nickname", cleanName, Preprocessor.normalize(cleanName)
 
                         else:
                             nicknames.append(cleanName[1:])
@@ -189,9 +189,9 @@ def loadTargetsFromFile(filename):
                     if cleanName != '':
                         if cleanName[0] != '^':
                             ergos.append(cleanName)
-                            if cleanName != Utils.normalize(cleanName): 
-                                ergos.append(Utils.normalize(cleanName))
-                                if debug: print "appended clean ergonym", cleanName, Utils.normalize(cleanName)
+                            if cleanName != Preprocessor.normalize(cleanName): 
+                                ergos.append(Preprocessor.normalize(cleanName))
+                                if debug: print "appended clean ergonym", cleanName, Preprocessor.normalize(cleanName)
 
                         else:
                             ergos.append(cleanName[1:])  
